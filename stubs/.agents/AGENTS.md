@@ -38,6 +38,7 @@ Aby používateľ neprišiel o údaje pri úprave/vytváraní v prípade výpadk
 ## 4. Možnosti v poliach (Settings - Selects)
 - Ak v modeli existuje pole, ktoré vyberá z viacerých možností (napr. category, typ atď.), **tieto možnosti sa nesmú "nadrátať" napevno v kóde**.
 - Možnosti sa ukladajú v databázovej tabuľke `settings`.
+- **Admin správa:** Pre model `Setting` musí vždy existovať plnohodnotné administrátorské CRUD rozhranie (Livewire komponenty a routy pre Index, Show, Create, Edit), presne rovnako, ako je to definované v bode 1.
 - **Integrácia s prekladmi (Translations):** 
   - V tabuľke `settings` slúžia stĺpce `flag`, `key` a `value` iba na definíciu vnútorného kľúča (napr. flag = `product`, key = `category`, value = `electronics`).
   - Formuláre pre ukladanie Settings (Create/Edit) musia priamo obsahovať textové polia pre preklady (napr. `value_sk`, `value_en`), ale tieto texty sa nesmú ukladať do modelu Setting.

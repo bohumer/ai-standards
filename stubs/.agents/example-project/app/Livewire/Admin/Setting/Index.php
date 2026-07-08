@@ -13,12 +13,7 @@ class Index extends BaseLivewireComponent
     public $category = '';
     public $flag = '';
 
-    // Create/Edit form
-    public $settingId = null;
-    #[Validate('required|string|max:100')]
-    public $key = '';
-    #[Validate('required|string|max:255')]
-    public $value = '';
+
 
     // Defined settings structure for sidebar
     public $settingsStructure = [
@@ -56,58 +51,7 @@ class Index extends BaseLivewireComponent
         }
     }
 
-    public function create()
-    {
-        $this->resetValidation();
-        $this->settingId = null;
-        $this->key = '';
-        $this->value = '';
-        $this->dispatch('open-modal', 'setting-modal');
-    }
 
-    public function edit($id)
-    {
-        $this->resetValidation();
-        $setting = Setting::findOrFail($id);
-        $this->settingId = $setting->id;
-        $this->key = $setting->key;
-        $this->value = $setting->value;
-        $this->dispatch('open-modal', 'setting-modal');
-    }
-
-    public function save()
-    {
-        $this->validate();
-
-        // Check for unique key within the same flag
-        $exists = Setting::where('flag', $this->flag)
-            ->where('key', $this->key)
-            ->where('id', '!=', $this->settingId)
-            ->exists();
-
-        if ($exists) {
-            $this->addError('key', 'Tento kľúč už v danej kategórii existuje.');
-            return;
-        }
-
-        if ($this->settingId) {
-            Setting::find($this->settingId)->update([
-                'key' => $this->key,
-                'value' => $this->value,
-            ]);
-            $this->flash('success', 'Položka bola upravená.');
-        } else {
-            Setting::create([
-                'flag' => $this->flag,
-                'lang' => 'sk', // Default to SK for now
-                'key' => $this->key,
-                'value' => $this->value,
-            ]);
-            $this->flash('success', 'Nová položka bola pridaná.');
-        }
-
-        $this->dispatch('close-modal', 'setting-modal');
-    }
 
     public function delete($id)
     {

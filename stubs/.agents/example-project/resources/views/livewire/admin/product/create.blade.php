@@ -1,49 +1,55 @@
+<!-- TODO PRE AI: Táto šablóna je úmyselne bez dizajnu a bez špecifických Blade komponentov! Musíš na ňu aplikovať Tailwind triedy (farby, tiene, zaoblenia) a nahradiť HTML tagy za existujúce Blade komponenty (napr. inputy, tlačidlá) tak, aby 100% ladili s UI dizajnom aktuálneho projektu! -->
 <div>
-    <div class="mb-6">
-        <a href="{{ route('admin.product.index') }}" class="text-gray-500 hover:text-gray-700">&larr; {{ t('admin.back') }}</a>
-        <h1 class="text-2xl font-bold mt-2">{{ t('product.create.title') }}</h1>
+    <div class="mb-4">
+        <a href="{{ route('admin.product.index') }}" wire:navigate class="p-2 border">Späť na zoznam</a>
     </div>
 
-    <form wire:submit.prevent="save" class="bg-white p-6 rounded shadow max-w-2xl">
-        <div class="mb-4">
-            <label class="block text-gray-700 mb-2">{{ t('product.field.name') }}</label>
-            <input wire:model.live.blur="name" type="text" class="w-full border rounded px-3 py-2">
-            @error('name') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-        </div>
+    <div class="border p-4">
+        <h2>{{ $page_title ?? 'Pridať produkt' }}</h2>
 
-        <div class="mb-4">
-            <label class="block text-gray-700 mb-2">{{ t('product.field.description') }}</label>
-            <textarea wire:model.live.blur="description" class="w-full border rounded px-3 py-2" rows="4"></textarea>
-            @error('description') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-        </div>
+        <form wire:submit="save" class="mt-4 space-y-4">
+            
+            <div>
+                <label>Názov</label>
+                <input type="text" wire:model.live.blur="name" class="border w-full">
+                @error('name') <span>{{ $message }}</span> @enderror
+            </div>
 
-        <div class="mb-4">
-            <label class="block text-gray-700 mb-2">{{ t('product.field.price') }} (&euro;)</label>
-            <input wire:model.live.blur="price" type="number" step="0.01" class="w-full border rounded px-3 py-2">
-            @error('price') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-        </div>
-        
-        <div class="mb-4">
-            <label class="block text-gray-700 mb-2">{{ t('product.field.category') }}</label>
-            <select wire:model.live.blur="category" class="w-full border rounded px-3 py-2 bg-white">
-                <option value="">-- Vyberte --</option>
-                @foreach($categories as $key => $val)
-                    <option value="{{ $key }}">{{ t("product.category.{$val}") }}</option>
-                @endforeach
-            </select>
-            @error('category') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-        </div>
+            <div>
+                <label>Kategória</label>
+                <select wire:model.live.blur="category" class="border w-full">
+                    <option value="">Vyberte kategóriu</option>
+                    @foreach($categories ?? [] as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('category') <span>{{ $message }}</span> @enderror
+            </div>
 
-        <div class="mb-6">
-            <label class="flex items-center space-x-2 cursor-pointer">
-                <input wire:model.live.blur="is_active" type="checkbox" class="form-checkbox h-5 w-5 text-blue-600">
-                <span class="text-gray-700">{{ t('product.field.is_active') }}</span>
-            </label>
-            @error('is_active') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-        </div>
+            <div>
+                <label>Popis</label>
+                <textarea wire:model.live.blur="description" class="border w-full" rows="4"></textarea>
+                @error('description') <span>{{ $message }}</span> @enderror
+            </div>
 
-        <div>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">{{ t('admin.save') }}</button>
-        </div>
-    </form>
+            <div>
+                <label>Cena (€)</label>
+                <input type="number" step="0.01" wire:model.live.blur="price" class="border w-full">
+                @error('price') <span>{{ $message }}</span> @enderror
+            </div>
+
+            <div>
+                <label>
+                    <input type="checkbox" wire:model.live.blur="is_active">
+                    Aktívny produkt
+                </label>
+                @error('is_active') <span>{{ $message }}</span> @enderror
+            </div>
+
+            <div class="mt-4 pt-4 border-t flex space-x-2">
+                <button type="submit" class="p-2 border bg-blue-500 text-white">Uložiť produkt</button>
+                <a href="{{ route('admin.product.index') }}" wire:navigate class="p-2 border">Zrušiť</a>
+            </div>
+        </form>
+    </div>
 </div>

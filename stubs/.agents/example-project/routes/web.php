@@ -35,7 +35,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Settings / Dictionaries
     Route::get('/settings', \App\Livewire\Admin\Setting\Index::class)->name('settings.index');
     Route::get('/settings/content', \App\Livewire\Admin\Setting\Content::class)->name('settings.content');
+    Route::get('/settings/edit/{setting}', \App\Livewire\Admin\Setting\Edit::class)->name('settings.edit');
     Route::get('/settings/{modelName}', \App\Livewire\Admin\Setting\Index::class)->name('settings.model');
     Route::get('/settings/{modelName}/{category}', \App\Livewire\Admin\Setting\Index::class)->name('settings.show');
+    Route::get('/settings/{modelName}/{category}/create', \App\Livewire\Admin\Setting\Create::class)->name('settings.create');
     
 });

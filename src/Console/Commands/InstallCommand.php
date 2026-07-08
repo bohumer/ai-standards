@@ -44,6 +44,27 @@ class InstallCommand extends Command
 
         File::copyDirectory($stubsPath, $destinationPath);
 
+        // Update .gitignore
+        $gitignorePath = base_path('.gitignore');
+        if (File::exists($gitignorePath)) {
+            $gitignoreContent = File::get($gitignorePath);
+            $linesToAdd = [
+                '/.agents/example-project',
+                '/.agents/standards'
+            ];
+            
+            $added = false;
+            foreach ($linesToAdd as $line) {
+                if (!str_contains($gitignoreContent, $line)) {
+                    File::append($gitignorePath, "\n" . $line);
+                    $added = true;
+                }
+            }
+            if ($added) {
+                $this->info('Added AI Standards directories to .gitignore.');
+            }
+        }
+
         $this->info('AI Standards successfully installed into .agents directory.');
     }
 }

@@ -46,6 +46,7 @@ Aby používateľ neprišiel o údaje pri úprave/vytváraní v prípade výpadk
 - Ak v modeli existuje pole, ktoré vyberá z viacerých možností (napr. category, typ atď.), **tieto možnosti sa nesmú "nadrátať" napevno v kóde**.
 - Možnosti sa ukladajú v databázovej tabuľke `settings`.
 - **Admin správa:** Pre model `Setting` musí vždy existovať plnohodnotné administrátorské CRUD rozhranie (Livewire komponenty a routy pre Index, Show, Create, Edit), presne rovnako, ako je to definované v bode 1.
+- **VAROVANIE PRE AGENTA (Settings Structure):** V `example-project` obsahuje komponent `Setting\Index` pole `$settingsStructure` so vzorovými dátami (napr. `Article`, `Course`, `StudyGroup`). **TOTO SÚ IBA PRÍKLADY.** Tieto modely v iných projektoch s najväčšou pravdepodobnosťou neexistujú. Pri implementácii Settings do nového projektu **musíš analyzovať skutočné modely cieľového projektu** a naplniť premennú `$settingsStructure` (alebo vymyslieť iný dynamický spôsob) iba takými kategóriami a modelmi, ktoré naozaj v danom projekte figurujú. Nikdy nekopíruj tieto vzorové kategórie do iných projektov.
 - **Integrácia s prekladmi (Translations):** 
   - V tabuľke `settings` slúžia stĺpce `flag`, `key` a `value` iba na definíciu vnútorného kľúča (napr. flag = `product`, key = `category`, value = `electronics`).
   - Formuláre pre ukladanie Settings (Create/Edit) musia priamo obsahovať textové polia pre preklady (napr. `value_sk`, `value_en`), ale tieto texty sa nesmú ukladať do modelu Setting.
@@ -55,7 +56,10 @@ Aby používateľ neprišiel o údaje pri úprave/vytváraní v prípade výpadk
 ## 5. HTML, CSS a Design
 - Pre šablóny **vždy použi Tailwind CSS**.
 - Design, štýly a použité komponenty však **musia byť vždy zosúladené s aktuálnym dizajnom** stránky každého konkrétneho projektu, v ktorom operuješ. Nenavrhuj univerzálny vzhľad, ale adaptuj kód tak, aby vizuálne splýval s hotovými zobrazeniami klienta.
-- **Pozor na ukážkové Blade komponenty:** Šablóny v `example-project` môžu obsahovať špecifické Blade komponenty (napr. `<x-form.input>`, `<x-admin.breadcrumbs>`). Tieto komponenty **nevytváraj** vo svojom novom projekte, ak tam už neexistujú. Namiesto toho použi ekvivalentné HTML/Tailwind štruktúry alebo Blade komponenty, ktoré sú už v danom projekte k dispozícii. Účelom ukážkových šablón je ukázať **logiku dát a prepojení**, nie presný vizuál.
+- **Pozor na ukážkové Blade komponenty a Layouty:** Šablóny v `example-project` môžu obsahovať špecifické Blade komponenty (napr. `<x-form.button>`, `<x-admin.breadcrumbs>`) alebo konkrétne layouty (napríklad `#[Layout('layouts.admin')]`). **Tieto komponenty a layouty sú len zástupné (PLACEHOLDERS).** Nikdy nevytváraj ani nekopíruj tieto UI prvky ani názvy layoutov do cieľového projektu, ak tam už neexistujú. 
+  - Ak cieľový projekt používa iný layout (napr. `layouts.app` namiesto `layouts.admin`), musíš použiť ten existujúci. 
+  - Ak cieľový projekt nemá komponent `<x-form.button>`, použi štandardný HTML `<button>` s adekvátnymi Tailwind triedami podľa existujúceho vizuálu. 
+  - Účelom ukážkových šablón je ukázať **logiku dát a prepojení** (ako fungujú parametre a volania), absolútne nie ich presný vizuál ani HTML štruktúru. Vždy prispôsob svoj kód existujúcemu frontendu!
 
 ## 6. Pravidlá pri zmene štruktúry modelu (Pridanie/Odobratie poľa)
 Vždy, keď dostaneš požiadavku pridať nové pole alebo odobrať existujúce pole z modelu, **musíš povinne vykonať krížovú kontrolu** so všetkými našimi štandardmi a zabezpečiť aktualizáciu na všetkých relevantných miestach:

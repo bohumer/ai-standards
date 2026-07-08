@@ -25,10 +25,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/products/{product}', \App\Livewire\Admin\Product\Show::class)->name('product.show');
     Route::get('/products/{product}/edit', \App\Livewire\Admin\Product\Edit::class)->name('product.edit');
 
-    // Settings
-    Route::get('/settings', \App\Livewire\Admin\Setting\Index::class)->name('setting.index');
-    Route::get('/settings/create', \App\Livewire\Admin\Setting\Create::class)->name('setting.create');
-    Route::get('/settings/{setting}', \App\Livewire\Admin\Setting\Show::class)->name('setting.show');
-    Route::get('/settings/{setting}/edit', \App\Livewire\Admin\Setting\Edit::class)->name('setting.edit');
+    // Settings / Dictionaries
+    Route::get('/settings', \App\Livewire\Admin\Setting\Index::class)->name('settings.index');
+    Route::get('/settings/{modelName}', \App\Livewire\Admin\Setting\Index::class)->name('settings.model');
+    Route::get('/settings/{modelName}/{category}', \App\Livewire\Admin\Setting\Index::class)->name('settings.show');
     
 });

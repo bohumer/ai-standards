@@ -12,8 +12,13 @@ class Index extends Component
     use \Livewire\WithPagination;
     use \App\Livewire\Traits\WithUniversalTable;
 
-    public function mount()
+    public $modelName;
+    public $category;
+
+    public function mount($modelName = null, $category = null)
     {
+        $this->modelName = $modelName;
+        $this->category = $category;
         $this->initFilters(Setting::class);
     }
 

@@ -9,7 +9,7 @@ use App\Livewire\Traits\HasDrafts;
 use Livewire\Attributes\Layout;
 
 #[Layout('layouts.admin')]
-class Create extends Component
+class Create extends \App\Support\BaseLivewireComponent
 {
     use HasDrafts;
 
@@ -29,6 +29,7 @@ class Create extends Component
 
     public function mount()
     {
+        $this->setTitle(t('product_create'));
         $this->loadDraft(Product::class, null);
     }
 
@@ -47,8 +48,8 @@ class Create extends Component
         
         $this->clearDraft(Product::class, null);
         
-        session()->flash('success', t('admin.saved'));
-        return redirect()->route('admin.product.index');
+        $this->flashSuccess(t('admin.saved'));
+        return $this->redirectBackWithParams('admin.product.index');
     }
 
     public function render()

@@ -8,13 +8,14 @@ use Livewire\Attributes\Layout;
 use App\Livewire\Traits\WithUniversalTable;
 
 #[Layout('layouts.admin')]
-class Index extends Component
+class Index extends \App\Support\BaseLivewireComponent
 {
     use \Livewire\WithPagination;
     use WithUniversalTable;
 
     public function mount()
     {
+        $this->setTitle(t('product_index'));
         $this->initFilters(Product::class);
     }
 

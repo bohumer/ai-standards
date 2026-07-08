@@ -3,8 +3,15 @@
 Tento súbor obsahuje špecifické pravidlá (Draft Pattern, Settings, preklady), ktoré musíš bezvýhradne dodržiavať pri vytváraní a úprave akéhokoľvek modelu v tomto systéme.
 
 > **DÔLEŽITÉ:** Okrem tohto súboru **musíš zohľadňovať aj všetky postupy a štandardy zadefinované v súboroch v priečinku `standards/`** (napríklad prísny zákaz priraďovania celých Eloquent modelov do public properties v Livewire podľa `3_models.md`). Pravidlá z `standards/` tvoria základ a tento súbor (AGENTS.md) ich dopĺňa o špecifické funkcie pre administráciu.
+> **Špecifické pravidlá projektu:** Vždy pred začatím práce s kódom skontroluj prítomnosť súboru `project_rules.md` v adresári `.agents/`. Ak existuje, tento súbor obsahuje dodatočné špecifické pravidlá a pokyny platné výhradne pre daný projekt, ktoré musíš dodržiavať nad rámec týchto globálnych štandardov. `AGENTS.md` nikdy neupravuj s projektovo-špecifickými zmenami.
 
 ## 1. Architektúra modelu a Views
+**Základná trieda (BaseLivewireComponent):**
+Všetky tvoje Livewire komponenty (Index, Show, Create, Edit) **musia** dediť od `App\Support\BaseLivewireComponent` (nikdy nie priamo od `Livewire\Component`). Tento base komponent ti poskytuje dôležité funkcie pre audit log, navigáciu a notifikácie, ktoré musíš logicky a povinne využívať:
+1. **Titulok stránky:** V metóde `mount()` vždy nastav dynamický titulok cez `$this->setTitle(t('nazov_stranky') . ' ' . $dalsia_premmenna)`. Nevpisuj titulok natvrdo do HTML.
+2. **Flash a Audit Log:** Zakaždým, keď používateľ niečo vytvorí (`save` v Create), upraví (`save` v Edit) alebo vymaže (`delete`), musíš zavolať `$this->flashSuccess(t('vhodny_kluc'))`. Táto metóda nielen ukáže používateľovi správu, ale automaticky zapíše túto udalosť do databázy do audit logu. Ak dôjde k chybe, použi `$this->flashError()`. Výnimkou je priebežné ukladanie draftov (konceptov), ktoré logovať **nesmieš**.
+3. **Návrat späť:** Pri tlačidlách "Zrušiť" alebo pri úspešnom uložení formulára používaj na presmerovanie späť na zoznam metódu `$this->redirectBackWithParams('admin.model.index')`.
+
 Pri každom modeli musíš vytvoriť nasledujúce 4 Livewire komponenty a im prislúchajúce Blade šablóny (`Index`, `Show`, `Create`, `Edit`).
 
 ### Index (Zoznam záznamov)
@@ -47,7 +54,8 @@ Aby používateľ neprišiel o údaje pri úprave/vytváraní v prípade výpadk
 
 ## 5. HTML, CSS a Design
 - Pre šablóny **vždy použi Tailwind CSS**.
-- Design, štýly a použité komponenty však **musia byť vždy zosúladené s aktuálnym dizajnom** stránky každého konkrétneho projektu, v ktorom operuješ. Nenavrhuj univerzálny vzhľad, ale adaptuj kód tak, aby vizuálne splýval s hotovými zobrazeniami klienta (použi rovnaké triedy, wrapper element a paddingy ako nájdeš inde).
+- Design, štýly a použité komponenty však **musia byť vždy zosúladené s aktuálnym dizajnom** stránky každého konkrétneho projektu, v ktorom operuješ. Nenavrhuj univerzálny vzhľad, ale adaptuj kód tak, aby vizuálne splýval s hotovými zobrazeniami klienta.
+- **Pozor na ukážkové Blade komponenty:** Šablóny v `example-project` môžu obsahovať špecifické Blade komponenty (napr. `<x-form.input>`, `<x-admin.breadcrumbs>`). Tieto komponenty **nevytváraj** vo svojom novom projekte, ak tam už neexistujú. Namiesto toho použi ekvivalentné HTML/Tailwind štruktúry alebo Blade komponenty, ktoré sú už v danom projekte k dispozícii. Účelom ukážkových šablón je ukázať **logiku dát a prepojení**, nie presný vizuál.
 
 ## 6. Pravidlá pri zmene štruktúry modelu (Pridanie/Odobratie poľa)
 Vždy, keď dostaneš požiadavku pridať nové pole alebo odobrať existujúce pole z modelu, **musíš povinne vykonať krížovú kontrolu** so všetkými našimi štandardmi a zabezpečiť aktualizáciu na všetkých relevantných miestach:

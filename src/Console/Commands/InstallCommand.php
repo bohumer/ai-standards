@@ -28,7 +28,7 @@ class InstallCommand extends Command
     {
         $this->info('Installing AI Standards...');
 
-        $stubsPath = __DIR__ . '/../../../../stubs/.agents';
+        $stubsPath = __DIR__ . '/../../../stubs/.agents';
         $destinationPath = base_path('.agents');
 
         if (!File::exists($stubsPath)) {

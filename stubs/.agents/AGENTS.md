@@ -60,6 +60,7 @@ Aby používateľ neprišiel o údaje pri úprave/vytváraní v prípade výpadk
   - Ak cieľový projekt používa iný layout (napr. `layouts.app` namiesto `layouts.admin`), musíš použiť ten existujúci. 
   - Ak cieľový projekt nemá komponent `<x-form.button>`, použi štandardný HTML `<button>` s adekvátnymi Tailwind triedami podľa existujúceho vizuálu. 
   - Účelom ukážkových šablón je ukázať **logiku dát a prepojení** (ako fungujú parametre a volania), absolútne nie ich presný vizuál ani HTML štruktúru. Vždy prispôsob svoj kód existujúcemu frontendu!
+- **Zákaz natívnych upozornení (wire:confirm):** Nikdy nepoužívaj natívne upozornenia prehliadača ako `wire:confirm="Naozaj zmazať?"`, `alert()` alebo `confirm()`. Tieto prvky kazia profesionálny vzhľad. Na potvrdzovanie akcií (napr. zmazanie) **vždy použi alebo vytvor dizajnové modálne okno** (napr. cez AlpineJS alebo samostatný Livewire komponent ako `@livewire('admin.translation.delete')`), ktoré je vizuálne zosúladené s projektom.
 
 ## 6. Pravidlá pri zmene štruktúry modelu (Pridanie/Odobratie poľa)
 Vždy, keď dostaneš požiadavku pridať nové pole alebo odobrať existujúce pole z modelu, **musíš povinne vykonať krížovú kontrolu** so všetkými našimi štandardmi a zabezpečiť aktualizáciu na všetkých relevantných miestach:

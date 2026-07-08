@@ -9,7 +9,7 @@
             <h2>{{ $page_title ?? 'Detail produktu' }}</h2>
             <div class="space-x-2">
                 <a href="{{ route('admin.product.edit', $product->id) }}" wire:navigate class="p-2 border">Upraviť</a>
-                <button wire:click="delete" wire:confirm="Naozaj zmazať?" class="p-2 border text-red-500">Zmazať</button>
+                <button wire:click="$dispatch('confirm-delete', { id: {{ $product->id }} })" class="p-2 border text-red-500">Zmazať</button>
             </div>
         </div>
 
@@ -41,4 +41,7 @@
             <p class="whitespace-pre-line">{{ $product->description }}</p>
         </div>
     </div>
+
+    {{-- Delete Confirmation Component (Modal) --}}
+    <!-- TODO PRE AI: Tu umiestni vlastný dizajnový Livewire modál pre potvrdzovanie zmazania (napr. na základe eventu 'confirm-delete'). NESMIEŠ použiť natívny wire:confirm! -->
 </div>

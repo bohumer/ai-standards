@@ -40,7 +40,7 @@
                         <td class="p-4 border-b">{{ $item->is_active ? 'Aktívny' : 'Neaktívny' }}</td>
                         <td class="p-4 border-b text-right space-x-2">
                             <a href="{{ route('admin.product.edit', $item->id) }}" wire:navigate>Upraviť</a>
-                            <button wire:click="delete({{ $item->id }})" wire:confirm="Naozaj zmazať?">Zmazať</button>
+                            <button wire:click="$dispatch('confirm-delete', { id: {{ $item->id }} })">Zmazať</button>
                         </td>
                     </tr>
                 @empty
@@ -55,4 +55,7 @@
     <div class="mt-4">
         {{ $items->links() }}
     </div>
+
+    {{-- Delete Confirmation Component (Modal) --}}
+    <!-- TODO PRE AI: Tu umiestni vlastný dizajnový Livewire modál pre potvrdzovanie zmazania (napr. na základe eventu 'confirm-delete'). NESMIEŠ použiť natívny wire:confirm! -->
 </div>

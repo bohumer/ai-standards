@@ -44,6 +44,20 @@ class InstallCommand extends Command
 
         File::copyDirectory($stubsPath, $destinationPath);
 
+        // Merge project_rules.md into AGENTS.md if it exists
+        $agentsFile = $destinationPath . '/AGENTS.md';
+        $rulesFile = $destinationPath . '/project_rules.md';
+        
+        if (File::exists($agentsFile) && File::exists($rulesFile)) {
+            $agentsContent = File::get($agentsFile);
+            $rulesContent = trim(File::get($rulesFile));
+
+            if (!empty($rulesContent) && !str_contains($agentsContent, $rulesContent)) {
+                File::append($agentsFile, "\n\n" . $rulesContent . "\n");
+                $this->info('Automatically appended project_rules.md to AGENTS.md.');
+            }
+        }
+
         // Update .gitignore
         $gitignorePath = base_path('.gitignore');
         if (File::exists($gitignorePath)) {

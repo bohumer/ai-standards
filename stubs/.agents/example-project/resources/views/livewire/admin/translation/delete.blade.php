@@ -1,12 +1,21 @@
-<!-- TODO PRE AI: Táto šablóna slúži ako potvrdzovací dialóg na zmazanie. V tvojom projekte môžeš využiť existujúce modály alebo iný spôsob potvrdenia. Toto je iba zástupný HTML kód bez dizajnu. -->
-@if($showConfirmDelete)
-    <div class="border p-4 mt-4 bg-red-50">
-        <h2>{{ t('confirm_delete') }}</h2>
-        <p>{{ t('delete_confirmation_text', ['item' => $keyToDelete]) }}</p>
-        
-        <div class="mt-4 flex space-x-2">
-            <button wire:click="delete" class="p-2 border bg-red-500 text-white">{{ t('delete') }}</button>
-            <button wire:click="cancelDelete" class="p-2 border">{{ t('cancel') }}</button>
+<div>
+    @if($open)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+                <h2 class="text-lg font-bold text-gray-900">{{ t('admin.common.confirm_delete_title') }}</h2>
+                <p class="text-sm text-gray-600">
+                    {{ t('admin.translation.delete.confirm_text', ['key' => $translationKey]) }}
+                </p>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" wire:click="$set('open', false)" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700">
+                        {{ t('admin.common.cancel') }}
+                    </button>
+                    <button type="button" wire:click="delete" wire:loading.attr="disabled" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium">
+                        {{ t('admin.common.delete') }}
+                    </button>
+                </div>
+            </div>
         </div>
-    </div>
-@endif
+    @endif
+</div>

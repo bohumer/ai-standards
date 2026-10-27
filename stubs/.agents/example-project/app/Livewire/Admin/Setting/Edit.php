@@ -2,79 +2,119 @@
 
 namespace App\Livewire\Admin\Setting;
 
+use App\Livewire\Traits\HasDrafts;
 use App\Models\Setting;
 use App\Support\BaseLivewireComponent;
-use App\Livewire\Traits\HasDrafts;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 
-#[Layout('layouts.admin')]
+#[Layout('components.layouts.admin')]
 class Edit extends BaseLivewireComponent
 {
     use HasDrafts;
 
-    public $settingId;
-    public $modelName = '';
-    public $category = '';
-    public $flag = '';
+    #[Locked]
+    public int $settingId;
 
     #[Validate('required|string|max:100')]
-    public $key = '';
-    #[Validate('required|string|max:255')]
-    public $value = '';
+    public string $flag = '';
 
-    public function mount(Setting $setting)
+    #[Validate('required|string|max:100')]
+    public string $key = '';
+
+    public string $value = '';
+
+    public array $label = [];
+
+    #[Computed]
+    public function setting(): Setting
+    {
+        return Setting::query()->findOrFail($this->settingId);
+    }
+
+    protected function rules(): array
+    {
+        $rules = [
+            'value' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('settings', 'value')
+                    ->where(fn ($q) => $q->where('flag', $this->flag)->where('key', $this->key))
+                    ->ignore($this->settingId),
+            ],
+            'label.sk' => ['required', 'string', 'max:255'],
+        ];
+
+        foreach (app_langs() as $lang) {
+            if ($lang !== 'sk') {
+                $rules["label.{$lang}"] = ['nullable', 'string', 'max:255'];
+            }
+        }
+
+        return $rules;
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'value.unique' => t('admin.setting.validation.exists'),
+            'label.sk.required' => t('admin.setting.validation.label_required'),
+        ];
+    }
+
+    public function mount(Setting $setting): void
     {
         $this->settingId = $setting->id;
+        $this->referrer = request()->header('Referer');
+        $this->setTitle(t('admin.setting.edit.title') . ' - ' . $setting->label);
+
         $this->flag = $setting->flag;
-        
-        $parts = explode('.', $this->flag);
-        $this->modelName = strtolower($parts[0] ?? '');
-        $this->category = strtolower($parts[1] ?? '');
+        $this->key = $setting->key;
+        $this->value = $setting->value;
 
-        $this->setTitle(t('admin.settings.edit') . ' - ' . $this->flag . ' (' . $setting->key . ')');
-        
-        if (!$this->loadDraft(Setting::class, $this->settingId)) {
-            $this->fill([
-                'key' => $setting->key,
-                'value' => $setting->value,
-            ]);
+        $labels = $setting->getTranslations('label');
+        foreach (app_langs() as $lang) {
+            $this->label[$lang] = $labels[$lang] ?? '';
         }
+
+        $this->loadDraft(Setting::class, $this->settingId);
     }
 
-    public function updated()
+    public function updated(): void
     {
-        $this->saveDraft(Setting::class, $this->settingId, $this->only(['key', 'value']));
+        $this->saveDraft(
+            Setting::class,
+            $this->settingId,
+            $this->only(['flag', 'key', 'value', 'label'])
+        );
     }
 
-    public function save()
+    public function save(): mixed
     {
         $this->validate();
 
-        // Check for unique key within the same flag
-        $exists = Setting::where('flag', $this->flag)
-            ->where('key', $this->key)
-            ->where('id', '!=', $this->settingId)
-            ->exists();
-
-        if ($exists) {
-            $this->addError('key', 'Tento kľúč už v danej kategórii existuje.');
-            return;
-        }
-
-        Setting::find($this->settingId)->update([
-            'key' => $this->key,
+        $this->setting->update([
+            'flag' => strtolower($this->flag),
+            'key' => strtolower($this->key),
             'value' => $this->value,
+            'label' => $this->label,
         ]);
-        
+
         $this->clearDraft(Setting::class, $this->settingId);
-        
-        $this->flashSuccess('Položka bola upravená.');
-        return $this->redirect(route('admin.settings.show', ['modelName' => $this->modelName, 'category' => $this->category]), navigate: true);
+        $this->flashSuccess(t('admin.setting.messages.updated'));
+
+        return $this->redirectBackWithParams('admin.setting.index');
     }
 
-    public function render()
+    public function render(): View
     {
-        return view('livewire.admin.setting.edit');
+        return view('livewire.admin.setting.edit', [
+            'languages' => app_langs(),
+        ]);
     }
 }

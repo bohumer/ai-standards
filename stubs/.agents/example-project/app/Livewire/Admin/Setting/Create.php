@@ -2,72 +2,105 @@
 
 namespace App\Livewire\Admin\Setting;
 
+use App\Livewire\Traits\HasDrafts;
 use App\Models\Setting;
 use App\Support\BaseLivewireComponent;
-use App\Livewire\Traits\HasDrafts;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 
-#[Layout('layouts.admin')]
+#[Layout('components.layouts.admin')]
 class Create extends BaseLivewireComponent
 {
     use HasDrafts;
 
-    public $modelName = '';
-    public $category = '';
-    public $flag = '';
+    #[Validate('required|string|max:100')]
+    public string $flag = '';
 
     #[Validate('required|string|max:100')]
-    public $key = '';
-    #[Validate('required|string|max:255')]
-    public $value = '';
+    public string $key = '';
 
-    public function mount($modelName, $category)
+    public string $value = '';
+
+    public array $label = [];
+
+    protected function rules(): array
     {
-        $this->modelName = strtolower($modelName);
-        $this->category = strtolower($category);
-        $this->flag = ucfirst($this->modelName) . '.' . $this->category;
-        
-        $this->setTitle(t('admin.settings.create_new') . ' - ' . $this->flag);
-        
-        $this->loadDraft(Setting::class, null);
+        $rules = [
+            'value' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('settings', 'value')->where(
+                    fn ($q) => $q->where('flag', $this->flag)->where('key', $this->key)
+                ),
+            ],
+            'label.sk' => ['required', 'string', 'max:255'],
+        ];
+
+        foreach (app_langs() as $lang) {
+            if ($lang !== 'sk') {
+                $rules["label.{$lang}"] = ['nullable', 'string', 'max:255'];
+            }
+        }
+
+        return $rules;
     }
 
-    public function updated()
+    protected function messages(): array
     {
-        $this->saveDraft(Setting::class, null, $this->only(['key', 'value', 'modelName', 'category', 'flag']));
+        return [
+            'value.unique' => t('admin.setting.validation.exists'),
+            'label.sk.required' => t('admin.setting.validation.label_required'),
+        ];
     }
 
-    public function save()
+    public function mount(?string $flag = null, ?string $key = null): void
+    {
+        $this->referrer = request()->header('Referer');
+        $this->flag = $flag ? strtolower($flag) : '';
+        $this->key = $key ? strtolower($key) : '';
+        $this->setTitle(t('admin.setting.create.title'));
+
+        foreach (app_langs() as $lang) {
+            $this->label[$lang] = '';
+        }
+
+        $this->loadDraft(Setting::class, null, "{$this->flag}.{$this->key}");
+    }
+
+    public function updated(): void
+    {
+        $this->saveDraft(
+            Setting::class,
+            null,
+            $this->only(['flag', 'key', 'value', 'label']),
+            "{$this->flag}.{$this->key}"
+        );
+    }
+
+    public function save(): mixed
     {
         $this->validate();
 
-        // Check for unique key within the same flag
-        $exists = Setting::where('flag', $this->flag)
-            ->where('key', $this->key)
-            ->exists();
-
-        if ($exists) {
-            $this->addError('key', 'Tento kľúč už v danej kategórii existuje.');
-            return;
-        }
-
-        Setting::create([
-            'flag' => $this->flag,
-            'lang' => 'sk', // Default to SK for now
-            'key' => $this->key,
+        Setting::query()->create([
+            'flag' => strtolower($this->flag),
+            'key' => strtolower($this->key),
             'value' => $this->value,
-            'user_id' => auth()->id() ?? 1,
+            'label' => $this->label,
         ]);
-        
-        $this->clearDraft(Setting::class, null);
-        
-        $this->flashSuccess('Nová položka bola pridaná.');
-        return $this->redirect(route('admin.settings.show', ['modelName' => $this->modelName, 'category' => $this->category]), navigate: true);
+
+        $this->clearDraft(Setting::class, null, "{$this->flag}.{$this->key}");
+        $this->flashSuccess(t('admin.setting.messages.created'));
+
+        return $this->redirectBackWithParams('admin.setting.index');
     }
 
-    public function render()
+    public function render(): View
     {
-        return view('livewire.admin.setting.create');
+        return view('livewire.admin.setting.create', [
+            'languages' => app_langs(),
+        ]);
     }
 }

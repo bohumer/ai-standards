@@ -2,27 +2,39 @@
 
 namespace App\Livewire\Admin\Product;
 
-use Livewire\Component;
 use App\Models\Product;
+use App\Support\BaseLivewireComponent;
+use App\Traits\WithUniversalTable;
+use Illuminate\View\View;
 use Livewire\Attributes\Layout;
-use App\Livewire\Traits\WithUniversalTable;
+use Livewire\Attributes\On;
+use Livewire\WithPagination;
 
-#[Layout('layouts.admin')]
-class Index extends \App\Support\BaseLivewireComponent
+#[Layout('components.layouts.admin')]
+class Index extends BaseLivewireComponent
 {
-    use \Livewire\WithPagination;
+    use WithPagination;
     use WithUniversalTable;
 
-    public function mount()
+    public function mount(): void
     {
-        $this->setTitle(t('product_index'));
-        $this->initFilters(Product::class);
+        $this->authorize('viewAny', Product::class);
+        $this->setTitle(t('admin.product.index.title'));
+        $this->initFilters(Product::class, ['delete', 'update_is_active']);
     }
 
-    public function render()
+    #[On('product-deleted')]
+    public function refreshList(): void
     {
+        $this->resetPage();
+    }
+
+    public function render(): View
+    {
+        $query = Product::query()->with('user');
+
         return view('livewire.admin.product.index', [
-            'products' => $this->applyUniversalSearchAndSort(Product::query())->paginate(10),
+            'products' => $this->applyUniversalSearchAndSort($query)->paginate($this->getPerPageLimit()),
         ]);
     }
 }

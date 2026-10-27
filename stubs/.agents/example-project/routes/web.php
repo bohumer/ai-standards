@@ -2,42 +2,23 @@
 
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application.
-|
-*/
-
-// Public routes here...
-
 // Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    
-    // Dashboard or Admin home
-    // Route::get('/', \App\Livewire\Admin\Dashboard::class)->name('dashboard');
-
-    // Products
+    // Products CRUD
     Route::get('/products', \App\Livewire\Admin\Product\Index::class)->name('product.index');
     Route::get('/products/create', \App\Livewire\Admin\Product\Create::class)->name('product.create');
-    Route::get('/products/{product}', \App\Livewire\Admin\Product\Show::class)->name('product.show');
-    Route::get('/products/{product}/edit', \App\Livewire\Admin\Product\Edit::class)->name('product.edit');
+    Route::get('/products/{product}', \App\Livewire\Admin\Product\Show::class)->whereNumber('product')->name('product.show');
+    Route::get('/products/{product}/edit', \App\Livewire\Admin\Product\Edit::class)->whereNumber('product')->name('product.edit');
 
-    // Translations
-    Route::name('translation.')->group(function () {
-        Route::get('/translations', \App\Livewire\Admin\Translation\Index::class)->name('index');
-        Route::get('/translation/create', \App\Livewire\Admin\Translation\Create::class)->name('create');
-        Route::get('/translation/edit/{lang}/{key}', \App\Livewire\Admin\Translation\Edit::class)->name('edit');
-    });
+    // Settings / Dictionaries CRUD
+    Route::get('/settings', \App\Livewire\Admin\Setting\Index::class)->name('setting.index');
+    Route::get('/settings/create/{flag?}/{key?}', \App\Livewire\Admin\Setting\Create::class)->name('setting.create');
+    Route::get('/settings/{setting}', \App\Livewire\Admin\Setting\Show::class)->whereNumber('setting')->name('setting.show');
+    Route::get('/settings/{setting}/edit', \App\Livewire\Admin\Setting\Edit::class)->whereNumber('setting')->name('setting.edit');
 
-    // Settings / Dictionaries
-    Route::get('/settings', \App\Livewire\Admin\Setting\Index::class)->name('settings.index');
-    Route::get('/settings/content', \App\Livewire\Admin\Setting\Content::class)->name('settings.content');
-    Route::get('/settings/edit/{setting}', \App\Livewire\Admin\Setting\Edit::class)->name('settings.edit');
-    Route::get('/settings/{modelName}', \App\Livewire\Admin\Setting\Index::class)->name('settings.model');
-    Route::get('/settings/{modelName}/{category}', \App\Livewire\Admin\Setting\Index::class)->name('settings.show');
-    Route::get('/settings/{modelName}/{category}/create', \App\Livewire\Admin\Setting\Create::class)->name('settings.create');
-    
+    // Static UI Translations CRUD
+    Route::get('/translations', \App\Livewire\Admin\Translation\Index::class)->name('translation.index');
+    Route::get('/translations/create', \App\Livewire\Admin\Translation\Create::class)->name('translation.create');
+    Route::get('/translations/{key}', \App\Livewire\Admin\Translation\Show::class)->where('key', '.+')->name('translation.show');
+    Route::get('/translations/{key}/edit', \App\Livewire\Admin\Translation\Edit::class)->where('key', '.+')->name('translation.edit');
 });

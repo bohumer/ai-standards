@@ -6,26 +6,24 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('drafts', function (Blueprint $table) {
+        Schema::create('settings', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->index();
-            $table->string('model_type');
-            $table->unsignedBigInteger('model_id')->nullable();
+            $table->string('flag');
+            $table->string('key');
+            $table->string('value');
+            $table->json('label');
             $table->json('payload')->nullable();
             $table->timestamps();
+
+            $table->unique(['flag', 'key', 'value']);
+            $table->index(['flag', 'key']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('drafts');
+        Schema::dropIfExists('settings');
     }
 };

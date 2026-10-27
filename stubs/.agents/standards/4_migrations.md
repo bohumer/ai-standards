@@ -43,35 +43,32 @@ return new class extends Migration
 };
 ```
 
-- Pre polymorfné (morph) tabuľky používajte označenie `model` namiesto prefixu `abble_` (napr. `commentable_id`).
+- Pre polymorfné (morph) tabuľky používajte buď štandardnú Laravel konvenciu `$table->morphs('imageable')` (`*able`), alebo internú konvenciu `$table->morphs('model')` (`model_type`, `model_id`). V `AppServiceProvider::boot()` vždy zaregistrujte `Relation::enforceMorphMap([...])`, aby sa v databáze neukladali plné PHP menné priestory tried.
 
 ```php
-	Schema::create('comments', function (Blueprint $table) {
+	Schema::create('images', function (Blueprint $table) {
 		$table->id();
-		$table->unsignedBigInteger('model_id'); // ID of the related model
-		$table->string('model_type'); // Model class name (Post, Video, etc.)
-		$table->text('comment');      // The actual comment
+		$table->morphs('imageable'); // Creates imageable_type, imageable_id + composite index
+		$table->string('path');
+		$table->unsignedSmallInteger('sort_order')->default(0);
 		$table->timestamps();
 	});
 ```
 
-  - A následne to takto používajte v modeloch a controlleroch:
+  - A následne to takto používajte v modeloch:
 
 ```php
-// Relationship -- Many to Many (Polymorphic)
-public function comments(): MorphToMany {
-    return $this->morphMany(comment::class, 'model');
+// Relationship -- One to Many (Polymorphic)
+public function images(): MorphMany
+{
+    return $this->morphMany(Image::class, 'imageable');
 }
-
-// Add a comment to the Post
-$post->comments()->create(['comment' => 'Great post!']);
 ```
 
-- Pre lepšiu čitateľnosť a prenositeľnosť databázy používajte vstavané metódy Laravelu (`string`, `integer`, `foreignId` atď.) namiesto surových (raw) SQL dopytov.
-- Snažte sa vyhnúť zbytočne zložitej štruktúre tabuliek a celkovo sa snažte minimalizovať veľkosť databázy.
-- Vyhnite sa používaniu typu `bigInteger`, pokiaľ je zrejmé, že tabuľka (napríklad `categories` alebo `tags`) nikdy nebude obsahovať obrovské množstvo záznamov.
-- Všade, kde je to možné, použite `unsignedTinyInteger` a `tinyText` namiesto klasického `integer` alebo `string`.
-- Pri vývoji sa zamerajte na použitie MariaDB ako databázovej služby.
+- Pre lepšiu čitateľnosť a prenositeľnosť databázy používajte vstavané metódy Laravelu (`string`, `integer`, `foreignId`, `json` atď.) a Eloquent metódy namiesto surových (raw) SQL operátorov viazaných na jediný driver (napr. nepoužívajte MySQL `RLIKE`, pokiaľ existuje štandardná alternatíva kompatibilná aj s testovacím prostredím).
+- Primárnou cieľovou databázou je **MySQL 8.0+** (InnoDB, `utf8mb4`).
+- Pre všetky primárne a cudzie kľúče **vždy používajte `$table->id()` a `$table->foreignId('..._id')->constrained()`** (`BIGINT UNSIGNED`), aby bola zaručená plná kompatibilita InnoDB cudzích kľúčov. Menšie celočíselné typy (`unsignedTinyInteger`, `unsignedSmallInteger`) používajte iba pre malé nečíselníkové atribúty bez relácií (napr. `role`, `sort_order`).
+- **Nepoužívajte `tinyText`:** v znakovej sade `utf8mb4` má limit 255 bajtov (nie znakov) a nepodporuje štandardné B-Tree indexy bez dĺžky prefixu. Pre krátke reťazce vždy používajte `$table->string()`.
 - Pokiaľ je to aplikovateľné, definujte pre stĺpce predvolené hodnoty (default values), aby ste predišli problémom s hodnotami `NULL`.
 
 ```php
@@ -79,17 +76,19 @@ $table->boolean('is_active')->default(true);
 $table->string('status')->default('pending');
 ```
 
-- Na vynútenie vzťahov medzi tabuľkami používajte cudzie kľúče (foreign key constraints). Na kaskádové správanie používajte `onDelete()` a `onUpdate()`.
+- Na vynútenie vzťahov medzi tabuľkami používajte cudzie kľúče (foreign key constraints). Na kaskádové správanie používajte `cascadeOnDelete()` / `nullOnDelete()`.
 
 ```php
-$table->foreignId('user_id')->constrained()->onDelete('cascade');
+$table->foreignId('user_id')->constrained()->cascadeOnDelete();
 ```
 
-- Pre zvýšenie výkonu pridajte indexy na často dopytované stĺpce. Pre vynútenie jedinečnosti použite metódu `unique()`.
+- Pre zvýšenie výkonu pridajte indexy na často dopytované a filtrované stĺpce (vrátane oboch smerov v pivot tabuľkách). Pre vynútenie jedinečnosti použite metódu `unique()`.
+- Pre unikátne alebo zoraditeľné hodnoty uložené vo viacjazyčných `JSON` stĺpcoch (napr. `slug`) definujte v MySQL 8.0 generované virtuálne stĺpce s indexom:
 
 ```php
-$table->string('email')->unique();
-$table->index(['first_name', 'last_name']);
+$table->json('slug');
+$table->string('slug_sk')->virtualAs("json_unquote(json_extract(`slug`, '$.sk'))")->unique();
+$table->string('slug_en')->virtualAs("json_unquote(json_extract(`slug`, '$.en'))")->unique();
 ```
 
 - Pre polia, v ktorých môžu chýbať údaje, explicitne uveďte `nullable()`.
@@ -98,28 +97,13 @@ $table->index(['first_name', 'last_name']);
 $table->string('middle_name')->nullable();
 ```
 
-- Pre dlhšie textové polia vždy používajte samostatný model `Text()` a definujte polymorfnú (morph) reláciu.
+- **Dlhé textové a štruktúrované polia ukladajte priamo v tabuľke modelu:**
+  - Stĺpce typu `text`, `longText` a `json` definujte priamo v tabuľke príslušnej entity (MySQL 8 InnoDB `DYNAMIC` formát ukladá dlhé hodnoty off-page mimo hlavného B-Tree indexu).
+  - **Nevytvárajte** samostatnú polymorfnú tabuľku `texts` ani model `Text` – zbytočne to rozbíja dátovú integritu a spôsobuje N+1 dotazy.
 
-```php
-Schema::create('texts', function (Blueprint $table) {
-    $table->id(); // Auto-incrementing unsigned integer primary key
-    $table->unsignedInteger('model_id');   // Equivalent to UNSIGNED INT(10)
-    $table->tinyText('model_type');        // Equivalent to TINYTEXT
-    $table->tinyText('flag')->nullable();  // TINYTEXT with NULL default
-    $table->text('value')->nullable();     // TEXT with utf8mb4 collation
-});
-
-// In model:
-// Relationship -- One to One (Polymorphic)
-public function body(): MorphOne {
-	return $this->morphOne(Text::class, 'model')->where('flag', 'body');
-}
-```
-
-- Namiesto boolean hodnôt uprednostňujte dátumy (timestamps). Napríklad používajte `published_at` namiesto `is_published`.
-- Pre dátumové polia vždy používajte zmysluplnú príponu `_at`.
+- Pre časové okamihy udalostí uprednostňujte dátumové polia s príponou `_at` (napr. `published_at`, `email_verified_at`). Pre prepínače viditeľnosti alebo schválenia sú povolené aj explicitné `boolean` stĺpce (`is_approved`).
 
 
 ---
 ### Čo ďalej:
-5. Pozrite si štandardy pre [Pohľady (Views)](https://git.greksak.sk/Michal/coding-standard/src/branch/main/docs/5_views.md).
+5. Pozrite si štandardy pre [Pohľady (Views)](./5_views.md).

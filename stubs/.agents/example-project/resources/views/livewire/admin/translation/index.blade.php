@@ -1,88 +1,75 @@
-<!-- TODO PRE AI: Táto šablóna je úmyselne bez dizajnu a bez špecifických Blade komponentov! Musíš na ňu aplikovať Tailwind triedy (farby, tiene, zaoblenia) a nahradiť HTML tagy za existujúce Blade komponenty (napr. tlačidlá, inputy, ikony) tak, aby 100% ladili s UI dizajnom aktuálneho projektu! -->
-<div>
-    {{-- Header --}}
-    <div class="flex justify-between items-center mb-4">
-        <h1>{{ $page_title }}</h1>
-        <a href="{{ route('admin.translation.create') }}" wire:navigate class="p-2 border">
-            {{ t('Translation_create') }}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 class="text-2xl font-bold text-gray-900">{{ t('admin.translation.index.title') }}</h1>
+
+        <a
+            href="{{ route('admin.translation.create') }}"
+            wire:navigate
+            class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+        >
+            {{ t('admin.translation.index.add_new') }}
         </a>
     </div>
 
-    {{-- Search filter --}}
-    <div class="mb-4 flex items-center space-x-2">
-        <input type="text" wire:model.live.debounce.500ms="search" placeholder="{{ t('translations_search') }}" class="border p-2">
-        @if( $search )
-            <button wire:click="resetFilters" class="p-2 border">{{ t('search_clear') }}</button>
-        @endif
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <input
+            type="search"
+            wire:model.live.debounce.300ms="search"
+            placeholder="{{ t('admin.common.search_placeholder') }}"
+            class="w-full sm:w-80 rounded-lg border-gray-300 text-sm"
+        />
     </div>
 
-    {{-- Translations Empty --}}
-    @if( $items->isEmpty() )
-        <div class="p-4 text-center border">
-            <h2>{{ t('translations_not_found') }}</h2>
-            @if( $search )
-                <h3>{{ t('items_not_found_message') }}</h3>
-            @endif
-        </div>
-    @else
-        {{-- Pagination Top --}}
-        <!-- Vlož štandardné stránkovanie pre projekt -->
-
-        {{-- Translations table --}}
-        <div class="overflow-x-auto border">
-            <table class="w-full text-left">
-                <thead>
-                    <tr>
-                        <th class="p-4 border-b">{{ t('languages') }}</th>
-                        <th class="p-4 border-b cursor-pointer" wire:click="sortBy('key')">
-                            {{ t('key') }} @if($sortField === 'key') {{ $sortDirection === 'asc' ? '▲' : '▼' }} @endif
-                        </th>
-                        <th class="p-4 border-b cursor-pointer" wire:click="sortBy('value')">
-                            {{ t('value') }} @if($sortField === 'value') {{ $sortDirection === 'asc' ? '▲' : '▼' }} @endif
-                        </th>
-                        <th class="p-4 border-b">{{ t('actions') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($items as $item)
-                        <tr>
-                            <td class="p-4 border-b">
-                                <div class="flex items-center space-x-2">
-                                    @foreach( array_keys(config('app.langs_available')) as $langCode )
-                                        @php
-                                            $hasTranslation = in_array($langCode, $item['present_langs']);
-                                            $editTitle = $hasTranslation ? t('translation_edit_for_' . $langCode) : t('translation_create_for_' . $langCode);
-                                        @endphp
-                                        <a href="{{ route('admin.translation.edit', ['lang' => $langCode, 'key' => $item['key']]) }}" wire:navigate title="{{ $editTitle }}">
-                                            {{ strtoupper($langCode) }} {{ $hasTranslation ? '(✓)' : '(+)' }}
-                                        </a>
-                                    @endforeach
-                                </div>
-                            </td>
-                            <td class="p-4 border-b">{{ $item['key'] }}</td>
-                            <td class="p-4 border-b" title="{{ $item['key'] }}">{{ Str::limit(t($item['key']), 70) }}</td>
-                            <td class="p-4 border-b">
-                                @if(in_array(app()->getLocale(), $item['present_langs']))
-                                    <div class="flex items-center space-x-2">
-                                        <a href="{{ route('admin.translation.edit', [ 'lang' => app()->getLocale(), 'key' => $item['key'] ]) }}" wire:navigate title="{{ t('edit') }}">
-                                            Upraviť
-                                        </a>
-                                        <button wire:click="$dispatch('confirm-delete', { key: '{{ $item['key'] }}', lang: '{{ app()->getLocale() }}' })" title="{{ t('delete') }}">
-                                            Zmazať
-                                        </button>
-                                    </div>
-                                @endif
-                            </td>
-                        </tr>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th wire:click="toggleSort" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer">
+                        Key
+                    </th>
+                    @foreach($languages as $lang)
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{{ strtoupper($lang) }}</th>
                     @endforeach
-                </tbody>
-            </table>
-        </div>
+                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">{{ t('admin.common.actions') }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                @forelse($paginatedKeys as $row)
+                    <tr
+                        onclick="window.location='{{ route('admin.translation.show', ['key' => $row->key]) }}'"
+                        class="hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                        <td class="px-6 py-4 text-sm font-mono text-gray-900">{{ $row->key }}</td>
+                        @foreach($languages as $lang)
+                            <td class="px-6 py-4 text-sm text-gray-700">
+                                {{ $translations[$row->key][$lang] ?? '-' }}
+                            </td>
+                        @endforeach
+                        <td class="px-6 py-4 text-right text-sm space-x-3" onclick="event.stopPropagation()">
+                            <a href="{{ route('admin.translation.edit', ['key' => $row->key]) }}" wire:navigate class="text-indigo-600 hover:text-indigo-900 font-medium">
+                                {{ t('admin.common.edit') }}
+                            </a>
+                            <button
+                                type="button"
+                                wire:click="$dispatch('confirm-translation-delete', { key: '{{ addslashes($row->key) }}', redirect: false })"
+                                class="text-red-600 hover:text-red-900 font-medium"
+                            >
+                                {{ t('admin.common.delete') }}
+                            </button>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="{{ count($languages) + 2 }}" class="px-6 py-10 text-center text-sm text-gray-500">
+                            {{ t('admin.common.no_records') }}
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
-        {{-- Pagination Bottom --}}
-        <!-- Vlož štandardné stránkovanie pre projekt -->
-    @endif
+    <div>{{ $paginatedKeys->links() }}</div>
 
-    {{-- Delete Confirmation Component --}}
-    @livewire('admin.translation.delete')
+    <livewire:admin.translation.delete />
 </div>

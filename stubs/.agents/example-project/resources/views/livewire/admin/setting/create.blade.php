@@ -1,48 +1,52 @@
-<!-- TODO PRE AI: Táto šablóna je úmyselne bez dizajnu! Musíš na ňu aplikovať Tailwind triedy (farby, tiene, zaoblenia, veľkosti) tak, aby 100% ladili s existujúcim UI dizajnom aktuálneho projektu! -->
-<div class="space-y-4">
-    @php
-        $breadcrumbs = [
-            'Nastavenia' => route('admin.settings.index'),
-            ucfirst($modelName) => route('admin.settings.model', ['modelName' => $modelName]),
-            $category => route('admin.settings.show', ['modelName' => $modelName, 'category' => $category]),
-            'Pridať položku' => null,
-        ];
-    @endphp
-    
-    <!-- Ak v projekte neexistuje komponent x-admin.breadcrumbs, nahraď ho vlastným štandardným breadcrumb zobrazením -->
-    <x-admin.breadcrumbs :links="$breadcrumbs" />
+<div class="max-w-2xl space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">{{ t('admin.setting.create.title') }}</h1>
+        @if($hasDraft)
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">{{ t('admin.common.draft_loaded') }}</span>
+        @endif
+    </div>
 
-    <div class="border">
-        <div class="p-4 border-b">
-            <h2>Pridať novú položku</h2>
+    <form wire:submit="save" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Flag</label>
+                <input type="text" wire:model.live.blur="flag" class="mt-1 w-full rounded-lg border-gray-300 text-sm" />
+                @error('flag') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Key</label>
+                <input type="text" wire:model.live.blur="key" class="mt-1 w-full rounded-lg border-gray-300 text-sm" />
+                @error('key') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">{{ t('admin.setting.fields.value') }}</label>
+                <input type="text" wire:model.live.blur="value" class="mt-1 w-full rounded-lg border-gray-300 text-sm" />
+                @error('value') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
         </div>
 
-        <form wire:submit="save">
-            <div class="p-4 space-y-4">
+        <div class="space-y-4 pt-2 border-t border-gray-100">
+            @foreach($languages as $lang)
                 <div>
-                    <!-- Ak v projekte neexistujú form komponenty, použi klasické <label> a <input> s triedami podľa dizajnu -->
-                    <x-input-label for="key" value="Kľúč (ID pre systém)" />
-                    <x-text-input id="key" type="text" class="w-full" wire:model.live="key" placeholder="napr. news, a1, adults..." />
-                    <x-input-error :messages="$errors->get('key')" />
-                    <p class="text-xs mt-1">Kľúč by mal obsahovať iba malé písmená, čísla a pomlčky bez medzier.</p>
+                    <label class="block text-sm font-medium text-gray-700">
+                        {{ t('admin.setting.fields.label') }} ({{ strtoupper($lang) }})
+                    </label>
+                    <input type="text" wire:model.live.blur="label.{{ $lang }}" class="mt-1 w-full rounded-lg border-gray-300 text-sm" />
+                    @error("label.{$lang}") <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
+            @endforeach
+        </div>
 
-                <div>
-                    <x-input-label for="value" value="Zobrazená hodnota" />
-                    <x-text-input id="value" type="text" class="w-full" wire:model.live="value" placeholder="napr. Novinky, Úroveň A1..." />
-                    <x-input-error :messages="$errors->get('value')" />
-                </div>
-            </div>
-
-            <div class="p-4 border-t flex space-x-2">
-                <!-- Ak neexistujú x-form.button, použi obyčajné tlačidlá s dizajnom podľa projektu -->
-                <x-primary-button>
-                    Uložiť
-                </x-primary-button>
-                <x-secondary-button href="{{ route('admin.settings.show', ['modelName' => $modelName, 'category' => $category]) }}" wire:navigate>
-                    Zrušiť
-                </x-secondary-button>
-            </div>
-        </form>
-    </div>
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <button type="button" wire:click="redirectBackWithParams('admin.setting.index')" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700">
+                {{ t('admin.common.cancel') }}
+            </button>
+            <button type="submit" wire:loading.attr="disabled" wire:target="save" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium">
+                <span wire:loading.remove wire:target="save">{{ t('admin.common.save') }}</span>
+                <span wire:loading wire:target="save">{{ t('admin.common.saving') }}</span>
+            </button>
+        </div>
+    </form>
 </div>

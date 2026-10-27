@@ -5,38 +5,36 @@ namespace App\Support;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class BaseLivewireComponent extends Component
 {
+    #[Locked]
     public string $page_title = '';
-    public $referrer = false;
+
+    #[Locked]
+    public ?string $referrer = null;
 
     /**
-     * Set page Title
+     * Set dynamic page title rendered by the layout.
      */
-    public function setTitle($title)
+    public function setTitle(string $title): void
     {
         $this->page_title = $title;
     }
 
     /**
-     * Store log info into database
+     * Write an audit log entry into the logs table.
      */
-    public function log($level, $key = null, $message = null, $link = null)
+    public function log(string|array $level, ?string $key = null, ?string $message = null, ?string $link = null): void
     {
-        $data = (object) [];
-        if (is_array($level)) {
-            $data = (object) $level;
-        }
+        $data = is_array($level) ? (object) $level : (object) [];
 
         $location = request()->fullUrl();
-        
-        // Handle Livewire update requests to log the originating page instead
         if (request()->routeIs('livewire.update') || request()->routeIs('*.livewire.update')) {
             $location = url()->previous();
         }
-
         $location = str_replace(url('/'), '', $location);
 
         DB::table('logs')->insert([
@@ -47,78 +45,72 @@ class BaseLivewireComponent extends Component
             'message' => $data->message ?? $message,
             'location_from' => ltrim($location, '/'),
             'ip' => request()->ip(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 
     /**
-     * Store flash message in session and dispatch event
+     * Store flash message in session, dispatch UI event, and write audit log.
      */
-    public function flash($type, $key = false, $message = false, $link = null)
+    public function flash(string $type, string|false $key = false, string|false $message = false, ?string $link = null): void
     {
-        if (!$key && !$message) {
-            throw new \Exception("Error Processing Flash message", 1);
+        if (! $key && ! $message) {
+            throw new \InvalidArgumentException('Flash message requires either a translation key or a message string.');
         }
 
-        $messages = Session::get('flash_messages', []);
+        $level = match ($type) {
+            'success' => '1',
+            'info' => '2',
+            'warning' => '3',
+            'error' => '4',
+            default => '5',
+        };
 
-        switch ($type) {
-            case 'success':
-                $level = "1";
-                break;
-            case 'info':
-                $level = "2";
-                break;
-            case 'warning':
-                $level = "3";
-                break;
-            case 'error':
-                $level = "4";
-                break;
-            default:
-                $level = "5";
-                break;
-        }
-
-        if ($key && !$message) {
+        if ($key && ! $message) {
             $message = t($key);
         }
 
+        $messages = Session::get('flash_messages', []);
         $messages[] = ['type' => $type, 'text' => $message];
         Session::put('flash_messages', $messages);
+        Session::flash('status', $message);
 
-        $id = uniqid('', true);
-        $this->dispatch('flash-message', id: $id, type: $type, text: $message);
+        $this->dispatch('flash-message', id: uniqid('', true), type: $type, text: $message);
 
-        $this->log(compact('level', 'key', 'message', 'link'));
+        $this->log([
+            'level' => $level,
+            'key' => $key ?: null,
+            'message' => $message,
+            'link' => $link,
+        ]);
     }
 
-    public function flashSuccess($message)
+    public function flashSuccess(string $message): void
     {
         $this->flash('success', message: $message);
     }
 
-    public function flashError($message)
+    public function flashError(string $message): void
     {
         $this->flash('error', message: $message);
     }
 
     /**
-     * Redirect back with preserved filters
+     * Safely redirect back to the index route while preserving query parameters.
      */
-    public function redirectBackWithParams($routeName)
+    public function redirectBackWithParams(string $routeName): mixed
     {
-        $referrer = $this->referrer;
-        if ($referrer && str_contains($referrer, route($routeName))) {
-            return $this->redirect($referrer, navigate: true);
+        $expectedBase = route($routeName);
+
+        if ($this->referrer && str_starts_with($this->referrer, $expectedBase)) {
+            return $this->redirect($this->referrer, navigate: true);
         }
 
-        return $this->redirect(route($routeName), navigate: true);
+        return $this->redirect($expectedBase, navigate: true);
     }
 
-    /**
-     * Reset error for specific field
-     */
-    public function resetError($field): void
+    public function resetError(string $field): void
     {
         $this->resetErrorBag($field);
     }

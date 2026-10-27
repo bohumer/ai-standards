@@ -2,112 +2,95 @@
 
 namespace App\Livewire\Admin\Translation;
 
-use App\Http\Requests\Admin\Translation\FormRequest;
+use App\Livewire\Traits\HasDrafts;
 use App\Models\Translation;
 use App\Support\BaseLivewireComponent;
-use App\Traits\ValidationTrait;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Url;
+use Livewire\Attributes\Locked;
 
-#[Layout('layout.admin')]
+#[Layout('components.layouts.admin')]
 class Edit extends BaseLivewireComponent
 {
-	use ValidationTrait;
+    use HasDrafts;
 
-	#[Url]
-	public $lang;
-	#[Url]
-	public $key;
-	public $value = '';
-	public $model = null;
-	protected static $formRequest = FormRequest::class;
+    #[Locked]
+    public string $translationKey;
 
-	// _constructor
-	public function mount($lang, $key) {
+    public array $values = [];
 
-		// Set page title
-		$this->setTitle(t('translation_edit'));
+    protected function rules(): array
+    {
+        $rules = [
+            'values.sk' => ['required', 'string'],
+        ];
 
-		// Store back URL
-		$this->referrer = url()->previous();
+        foreach (app_langs() as $lang) {
+            if ($lang !== 'sk') {
+                $rules["values.{$lang}"] = ['nullable', 'string'];
+            }
+        }
 
-		// Decode attributes from URL
-		$this->lang = urldecode($lang);
-		$this->key = urldecode($key);
-	}
+        return $rules;
+    }
 
-	// Render view
-	public function render() {
+    protected function messages(): array
+    {
+        return [
+            'values.sk.required' => t('admin.translation.validation.value_required'),
+        ];
+    }
 
-		// Get / Create model
-		$this->model = Translation::where('key', $this->key)
-			->where('lang', $this->lang)
-			->first();
-		if ( empty($this->model) && !$this->lang_available() ) {
-			$this->flash('error', 'translation_not_found');
-			return $this->redirectBackWithParams('admin.translation.index');
-		}
+    public function mount(string $key): void
+    {
+        $existing = Translation::query()->where('key', $key)->pluck('value', 'lang')->all();
+        abort_if(empty($existing), 404);
 
-		// Render view
-		$this->value = $this->model?->value;
-		return view('livewire.admin.translation.form');
-	}
+        $this->translationKey = $key;
+        $this->referrer = request()->header('Referer');
+        $this->setTitle(t('admin.translation.edit.title') . ' - ' . $key);
 
-	// Save translations
-	public function save() {
-		
-		// Validation
-		$this->validate();
+        foreach (app_langs() as $lang) {
+            $this->values[$lang] = $existing[$lang] ?? '';
+        }
 
-		// Create model
-		if ( empty($this->model) ) {
-			$this->model = Translation::create([
-				'key' => $this->key,
-				'lang' => $this->lang,
-				'value' => $this->value,
-			]);
-			$this->flash('success', 'translation_created_successfully');
-			return $this->redirectBackWithParams('admin.translation.index');
-		}
+        $this->loadDraft(Translation::class, null, $this->translationKey);
+    }
 
-		// Unavailable lang provided
-		elseif ( !$this->lang_available() ) {
-			$this->flash('error', 'translation_not_found');
-			return $this->redirectBackWithParams('admin.translation.index');
-		}
+    public function updated(): void
+    {
+        $this->saveDraft(Translation::class, null, $this->only(['values']), $this->translationKey);
+    }
 
-		// Update model value
-		$this->model->value = $this->value;
-		$this->model->save();
-		$this->flash('success', 'translation_updated_successfully');
-		return $this->redirectBackWithParams('admin.translation.index');
-	}
+    public function save(): mixed
+    {
+        $this->validate();
 
-	// Cancel and go back
-	public function cancel() {
-		return $this->redirectBackWithParams('admin.translation.index');
-	}
+        foreach (app_langs() as $lang) {
+            $val = $this->values[$lang] ?? '';
+            if ($val !== '') {
+                Translation::query()->updateOrCreate(
+                    ['lang' => $lang, 'key' => $this->translationKey],
+                    ['value' => $val]
+                );
+            } else {
+                Translation::query()
+                    ->where('lang', $lang)
+                    ->where('key', $this->translationKey)
+                    ->delete();
+            }
+        }
 
-	// Check if lang is available
-	public function lang_available() {
-		$langs = config('app.langs_available'); // only available languages
-		return in_array($this->lang, array_keys($langs));
-	}
+        $this->clearDraft(Translation::class, null, $this->translationKey);
+        $this->flashSuccess(t('admin.translation.messages.updated'));
 
-	// On key change
-	public function updateKey() {
-		$this->key = $this->sanitizeKey($this->key);
-		$this->validate();
-		$this->model->key = $this->key;
-		$this->model->save();
-		$this->flash('warning', 'translation_key_changed');
-		return $this->redirectRoute('admin.translation.edit', [
-			'lang' => $this->lang,
-			'key' => $this->key,
-		], navigate: true);
-	}
+        return $this->redirectBackWithParams('admin.translation.index');
+    }
 
+    public function render(): View
+    {
+        return view('livewire.admin.translation.edit', [
+            'languages' => app_langs(),
+        ]);
+    }
 }
-

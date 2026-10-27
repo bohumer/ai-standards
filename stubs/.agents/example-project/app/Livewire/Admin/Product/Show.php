@@ -2,29 +2,34 @@
 
 namespace App\Livewire\Admin\Product;
 
-use Livewire\Component;
 use App\Models\Product;
+use App\Support\BaseLivewireComponent;
+use Illuminate\View\View;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 
-#[Layout('layouts.admin')]
-class Show extends \App\Support\BaseLivewireComponent
+#[Layout('components.layouts.admin')]
+class Show extends BaseLivewireComponent
 {
-    public Product $product;
+    #[Locked]
+    public int $productId;
 
-    public function mount(Product $product)
+    public function mount(Product $product): void
     {
-        $this->setTitle(t('product_show') . ' ' . $product->name);
-        $this->product = $product;
+        $this->authorize('view', $product);
+        $this->productId = $product->id;
+        $this->referrer = request()->header('Referer');
+        $this->setTitle(t('admin.product.show.title') . ' - ' . $product->name);
     }
 
-    public function delete()
+    #[Computed]
+    public function product(): Product
     {
-        $this->product->delete();
-        $this->flashSuccess(t('admin.deleted'));
-        return $this->redirectBackWithParams('admin.product.index');
+        return Product::query()->with('user')->findOrFail($this->productId);
     }
 
-    public function render()
+    public function render(): View
     {
         return view('livewire.admin.product.show');
     }

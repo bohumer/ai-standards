@@ -2,50 +2,110 @@
 
 namespace App\Models;
 
+use App\Traits\HasJsonTranslations;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Cache;
 
 class Setting extends Model
 {
-    public $timestamps = false;
+    use HasJsonTranslations;
+
+    protected $table = 'settings';
 
     protected $fillable = [
-        'user_id',
-        'session_id',
-        'lang',
         'flag',
         'key',
-        'value'
+        'value',
+        'label',
+        'payload',
     ];
 
-    /**
-     * Relationship -- One To One (Polymorphic) - Content text
-     */
-    public function content(): MorphOne
+    public array $translatable = [
+        'label',
+    ];
+
+    public array $searchable = [
+        'value',
+        'label',
+    ];
+
+    public array $sortable = [
+        'id',
+        'value',
+        'created_at',
+    ];
+
+    public array $filterable = [];
+
+    protected static array $runtimeCache = [];
+
+    protected function casts(): array
     {
-        return $this->morphOne(Text::class, 'model')->where('flag', 'content');
+        return [
+            'payload' => 'array',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        $flush = static function (self $model): void {
+            $prefix = "setting_{$model->flag}_{$model->key}";
+            Cache::forget($prefix);
+            unset(self::$runtimeCache[$prefix]);
+        };
+
+        static::saved($flush);
+        static::deleted($flush);
     }
 
     /**
-     * Relationship -- MorphMany - Files
+     * Return associative array [value => translated label] for select inputs.
      */
-    public function files(): MorphMany
+    public static function getList(string $flag, string $key): array
     {
-        // Assuming we will have a File model later like in popular
-        return $this->morphMany(File::class, 'model');
+        $items = self::getCachedItems($flag, $key);
+        $locale = app_locale();
+        $fallback = config('app.fallback_locale', 'sk');
+
+        $list = [];
+        foreach ($items as $item) {
+            $labels = $item['labels'];
+            $list[$item['value']] = $labels[$locale]
+                ?? $labels[$fallback]
+                ?? reset($labels)
+                ?: $item['value'];
+        }
+
+        return $list;
     }
 
     /**
-     * Get a key-value list of settings for a specific flag (e.g. 'Article.type')
+     * Return raw option codes for a setting group (e.g. ['sk', 'en']).
      */
-    public static function getList(string $flag, string $lang = 'sk'): array
+    public static function getCodes(string $flag, string $key): array
     {
-        return self::where('flag', $flag)
-            ->where(function ($q) use ($lang) {
-                $q->where('lang', $lang)->orWhereNull('lang')->orWhere('lang', '');
-            })
-            ->pluck('value', 'key')
-            ->toArray();
+        return array_column(self::getCachedItems($flag, $key), 'value');
+    }
+
+    protected static function getCachedItems(string $flag, string $key): array
+    {
+        $cacheKey = "setting_{$flag}_{$key}";
+
+        if (! isset(self::$runtimeCache[$cacheKey])) {
+            self::$runtimeCache[$cacheKey] = Cache::remember($cacheKey, 3600, static function () use ($flag, $key): array {
+                return self::query()
+                    ->where('flag', $flag)
+                    ->where('key', $key)
+                    ->orderBy('id')
+                    ->get()
+                    ->map(static fn (self $row) => [
+                        'value' => $row->value,
+                        'labels' => array_filter($row->getTranslations('label'), static fn ($v) => filled($v)),
+                    ])
+                    ->all();
+            });
+        }
+
+        return self::$runtimeCache[$cacheKey];
     }
 }

@@ -4,55 +4,50 @@ namespace App\Livewire\Admin\Translation;
 
 use App\Models\Translation;
 use App\Support\BaseLivewireComponent;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 
 class Delete extends BaseLivewireComponent
 {
-	public bool $showModal = false;
-	public ?string $translationKey = null;
-	public ?string $translationLang = null;
+    #[Locked]
+    public string $translationKey = '';
 
-	// Render view
-	public function render(): View {
+    #[Locked]
+    public bool $redirectAfterDelete = false;
 
-		// Store back URL
-		$this->referrer = url()->previous();
-		return view('livewire.admin.translation.delete');
-	}
+    public bool $open = false;
 
-	// Show modal
-	#[On('confirm-delete')]
-	public function confirmDelete(string $key, string $lang): void {
-		$this->translationKey = $key;
-		$this->translationLang = $lang;
-		$this->showModal = true;
-	}
+    #[On('confirm-translation-delete')]
+    public function confirmDelete(string $key, bool $redirect = false): void
+    {
+        $this->translationKey = $key;
+        $this->redirectAfterDelete = $redirect;
+        $this->open = true;
+    }
 
-	// Delete the specified translation
-	public function deleteTranslation() {
+    public function delete(): mixed
+    {
+        if ($this->translationKey === '') {
+            return null;
+        }
 
-		// Try to find and delete item
-		if ( $this->translationKey && $this->translationLang ) {
-			Translation::where('key', $this->translationKey)
-				->where('lang', $this->translationLang)
-				->delete();
-			$this->flash('success', 'translation_deleted_successfully');
-		} else $this->flash('error', 'translation_not_found');
+        Translation::query()->where('key', $this->translationKey)->delete();
 
-		// Emit event to parent/listener
-		$this->closeModal();
-		return $this->redirectBackWithParams('admin.translation.index');
-	}
+        $this->open = false;
+        $this->flashSuccess(t('admin.translation.messages.deleted'));
 
-	// Cancel the deletion and close the modal.
-	public function closeModal(): void {
-		$this->showModal = false;
-		$this->translationKey = null;
-		$this->translationLang = null;
-	}
+        if ($this->redirectAfterDelete) {
+            return $this->redirect(route('admin.translation.index'), navigate: true);
+        }
 
+        $this->dispatch('translation-deleted');
 
+        return null;
+    }
+
+    public function render(): View
+    {
+        return view('livewire.admin.translation.delete');
+    }
 }
-

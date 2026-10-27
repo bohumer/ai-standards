@@ -79,7 +79,10 @@ Route::get('/comment/{id}', [CommentController::class, 'show'])->where('id', '[0
 Route::get('/profile/{user?}', [ProfileController::class, 'show'])->name('profile.show');
 ```
 
+- **Ochrana catch-all (wildcard) ciest:**
+  - Ak v `routes/web.php` definujete dynamickú cestu na koreňovej úrovni (napr. `/{slug}` pre kategórie alebo CMS stránky), vždy ju umiestnite **na úplný koniec súboru** a chráňte ju regulárnym výrazom cez `where()`, aby neprekryla systémové prefixy (`admin`, `dashboard`, `livewire`, `api`, `storage`).
+
 
 ---
 ### Čo ďalej:
-2. Pozrite si štandardy pre [Controllery](https://git.greksak.sk/Michal/coding-standard/src/branch/main/docs/2_controllers.md).
+2. Pozrite si štandardy pre [Controllery](./2_controllers.md).

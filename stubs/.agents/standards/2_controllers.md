@@ -16,7 +16,7 @@
 - **Livewire Class Komponenty vs. Controllery:**
   - Livewire komponenty (v adresári `app/Livewire/`) de facto nahrádzajú tradičné webové controllery pre interaktívne podstránky.
   - Klasické controllery si ponechajte primárne pre API endpointy, exporty a sťahovanie súborov, príjem webhooks a čisto statické stránky.
-  - Rovnako ako controllery, ani Livewire komponenty by nemali obsahovať zložitú biznis logiku. Presúvajte ju do *Service* tried.
+  - Rovnako ako controllery, ani Livewire komponenty by nemali obsahovať zložitú biznis logiku. Presúvajte ju do *Service* tried (v `app/Services/`). Ak Livewire trieda presahuje približne **250 riadkov** alebo obsahuje viacúrovňové agregácie a filtrovacie dotazy, extrahujte túto logiku do samostatnej Service triedy (napr. `SearchService`).
   - **PHP 8.3 Využitie:** Pre konštanty v controlleroch a komponentoch využívajte typované konštanty tried (napr. `public const int PAGINATION_LIMIT = 15;`).
 
 ```php
@@ -34,7 +34,7 @@ public function index(UserService $userService): View|Response {
 ```
 
 - Ťažkú biznis logiku delegujte na **services** a recyklujte kód zo service tried.
-- **Nepoužívajte** repozitáre (repository), akcie (action) ani observer triedy - pre junior programátorov to môže byť ťažké na pochopenie.
+- **Nepoužívajte** vlastné repozitáre (repository), vlastné doménové akcie (action) ani observer triedy – zbytočne komplikujú architektúru. **Výnimkou** sú štandardné triedy `App\Actions\Fortify\*` vyžadované autentifikačným balíčkom Laravel Fortify.
 - Deklarujte **návratové typy (Return classes)** metódy pomocou dvojbodky po deklarácii metódy.
 - Uistite sa, že webové controllery vracajú objekty typu view, response alebo redirect.
 - API controllery musia vracať výlučne JSON odpovede (`response()->json()`).
@@ -64,7 +64,7 @@ class SimpleController extends Controller
 }
 ```
 
-- Ak potrebujete zobraziť zoznam databázových záznamov, vždy používajte [stránkovanie (pagination)](https://laravel.com/docs/11.x/pagination).
+- Ak potrebujete zobraziť zoznam databázových záznamov, vždy používajte [stránkovanie (pagination)](https://laravel.com/docs/13.x/pagination).
 
 - **Používajte Resource Controllery**
   - Pre štandardné CRUD operácie používajte resource controllery, aby vaše cesty a metódy zostali konzistentné a stručné.
@@ -124,4 +124,4 @@ public function store(PostRequest $request) {
 
 ---
 ### Čo ďalej:
-3. Pozrite si štandardy pre [Modely](https://git.greksak.sk/Michal/coding-standard/src/branch/main/docs/3_models.md).
+3. Pozrite si štandardy pre [Modely](./3_models.md).

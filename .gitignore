@@ -1,0 +1,8 @@
+/vendor/
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+.nextcloudsync.log
+.sync_*.db*

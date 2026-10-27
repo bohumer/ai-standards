@@ -2,71 +2,88 @@
 
 namespace App\Models;
 
+use App\Traits\HasJsonTranslations;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
+    use HasFactory, SoftDeletes, HasJsonTranslations;
+
+    protected $table = 'products';
+
     protected $fillable = [
         'user_id',
         'name',
+        'slug',
         'description',
+        'category',
         'price',
         'is_active',
-        'category',
+        'published_at',
     ];
 
-    protected $casts = [
-        'price' => 'decimal:2',
-        'is_active' => 'boolean',
+    public array $translatable = [
+        'name',
+        'slug',
+        'description',
     ];
 
-    /**
-     * Fields that can be searched using WithUniversalTable trait
-     */
-    public $searchable = [
+    public array $searchable = [
         'name',
         'description',
     ];
 
-    /**
-     * Fields that can be sorted using WithUniversalTable trait
-     */
-    public $sortable = [
+    public array $sortable = [
         'id',
         'name',
         'price',
         'created_at',
     ];
 
-    /**
-     * Fields that can be filtered using WithUniversalTable trait
-     */
-    public $filterable = [
+    public array $filterable = [
         'is_active',
         'category',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'price' => 'decimal:2',
+            'is_active' => 'boolean',
+            'published_at' => 'datetime',
+        ];
+    }
+
+    // Relationship -- Belongs to creator User
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    // Accessor -- formatted price with currency symbol
+    protected function formattedPrice(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => number_format((float) $this->price, 2, ',', ' ') . ' €',
+        );
+    }
+
     /**
-     * Get options for filterable fields. Used by WithUniversalTable.
+     * Filter options used by WithUniversalTable.
      */
     public static function getFilterOptions(string $field): array
     {
         return match ($field) {
             'is_active' => [
-                1 => 'Aktívne',
-                0 => 'Neaktívne',
+                1 => t('admin.common.active'),
+                0 => t('admin.common.inactive'),
             ],
             'category' => Setting::getList('product', 'category'),
             default => [],
         };
-    }
-
-    /**
-     * The user who created the product.
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

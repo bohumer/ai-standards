@@ -1,32 +1,56 @@
 # 6. Validácia
-- **Validácia priamo v Livewire komponente (Odporúčané pre interaktívne UI):**
-  - Pri Livewire komponentoch nepoužívajte triedy Form Request. Uprednostnite zabudovanú validáciu pomocou PHP 8 atribútov (`#[Validate]`) priamo na verejných vlastnostiach (public properties) komponentu.
-  - S PHP 8.3 naplno využívajte striktné typovanie dát.
-  - Pre chybové hlášky využite metódu `messages()` priamo v komponente, kde uplatníte vlastný prekladový helper `t()`.
-  - Vyhnete sa tým zložitému prepojeniu Form Requestov so životným cyklom Livewire komponentu.
+- **Jednotný štandard validácie v Livewire 4:**
+  - Pri Livewire komponentoch nepoužívajte triedy `FormRequest` a **nikdy nepoužívajte zastaranú vlastnosť `protected $rules = []`**.
+  - Používajte tieto dva navzájom kompatibilné spôsoby podľa charakteru polí:
+    1. **Atribút `#[Validate(...)]`** priamo na verejných vlastnostiach komponentu – pre jednoduché statické pravidlá skalárnych polí (`required`, `min`, `email`, `numeric`, `boolean`).
+    2. **Metódu `protected function rules(): array`** – vždy, keď pravidlá vyžadujú dynamickú logiku (napr. `Rule::unique(...)->ignore($this->modelId)`, podmienené pravidlá alebo viacjazyčné JSON polia `name.*` a `slug.sk`).
+  - S PHP 8.3 naplno využívajte striktné typovanie verejných vlastností (`public string`, `public ?int`, `public array`).
+  - Pre vlastné preložené chybové hlášky využite metódu `protected function messages(): array`, kde uplatníte prekladový helper `t()`.
 
 ```php
-namespace App\Livewire;
+namespace App\Livewire\Admin\Category;
 
+use App\Support\BaseLivewireComponent;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
-use Livewire\Component;
 
-class UserProfile extends Component
+class Edit extends BaseLivewireComponent
 {
-    #[Validate('required|min:3')]
-    public string $name = ''; 
+    #[Locked]
+    public int $categoryId;
 
-    #[Validate('required|email')]
-    public string $email = '';
+    #[Validate('required|integer|min:0')]
+    public int $order = 0;
 
-    // Custom validation error messages using t() helper
-    public function messages(): array {
+    public array $name = [];
+    public array $slug = [];
+
+    protected function rules(): array
+    {
         return [
-            'name.required' => t('rule_name_required'),
+            'name.sk' => ['required', 'string', 'max:255'],
+            'name.*' => ['nullable', 'string', 'max:255'],
+            'slug.sk' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('categories', 'slug->sk')->ignore($this->categoryId),
+            ],
         ];
     }
 
-    public function save(): void {
+    protected function messages(): array
+    {
+        return [
+            'name.sk.required' => t('category.validation.name_required'),
+            'slug.sk.unique' => t('category.validation.slug_unique'),
+        ];
+    }
+
+    public function save(): void
+    {
+        $this->authorize('update', $this->category);
         $this->validate();
         // Save logic...
     }
@@ -146,4 +170,4 @@ User::create($request->validated());
 
 ---
 ### Čo ďalej:
-7. Pozrite si štandardy pre [Testovanie](https://git.greksak.sk/Michal/coding-standard/src/branch/main/docs/7_testing.md).
+7. Pozrite si štandardy pre [Testovanie](./7_testing.md).

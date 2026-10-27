@@ -1,23 +1,30 @@
 # 7. Testovanie
-- **Píšte Unit aj Feature testy**
-  - **Unit (jednotkové) testy** využívajte najmä na detailné otestovanie každého jedného poľa formulára – či do neho povoľujeme vkladať správne formáty a či aplikácia vráti správnu validačnú chybu pri zadaní neplatných údajov.
-  - **Feature testy** používajte na testovanie ucelených procesov (flows) zahŕňajúcich cesty, controllery, pohľady a middlewary, čím sa zabezpečí správne fungovanie aplikácie ako celku.
+- **Jasné rozdelenie Unit a Feature testov**
+  - **Unit testy (`tests/Unit/`):** Používajte výlučne na izolované testovanie čistej PHP logiky, výpočtov, DTO a pomocných funkcií **bez prístupu k databáze, HTTP vrstve alebo Livewire kontajneru**.
+  - **Feature testy (`tests/Feature/`):** Používajte na testovanie všetkého, čo zahŕňa databázu, Eloquent modely, validácie formulárov, Livewire komponenty (`Livewire::test()`), middlewary, oprávnenia (Policies) a celé používateľské toky (flows).
 
-- **Testovanie interaktívnych Livewire komponentov:** 
-  - Na testovanie Livewire komponentov používajte špecializovaný helper `Livewire::test()` namiesto klasických HTTP požiadaviek. 
-  - Tento nástroj vám umožňuje plnohodnotne otestovať stav komponentu, jeho validáciu aj konkrétne akcie, a to bez nutnosti vykonávať klasické HTTP volania. Sústreďte sa na testovanie každej verejnej (public) metódy komponentu.
+- **Testovanie interaktívnych Livewire komponentov a bezpečnosti:**
+  - Na testovanie Livewire komponentov používajte špecializovaný helper `Livewire::test()`.
+  - Pri každom CRUD module a mutačnom komponente **povinne otestujte**:
+    1. Úspešné vytvorenie, úpravu a zmazanie záznamu oprávneným používateľom (vrátane uloženia a vyčistenia konceptu v `drafts`).
+    2. Validačné pravidlá povinných a unikátnych polí (`assertHasErrors`).
+    3. **Negatívny bezpečnostný scenár (403 / IDOR):** Overenie, že neprihlásený používateľ, používateľ s nižšou rolou alebo cudzí predajca nemôže zmeniť či zmazať cudzí záznam (`assertForbidden()`).
 
 ```php
 // Testing Livewire form validation
-Livewire::test(ContactForm::class)
-    ->set('email', '')
-    ->call('submit')
-    ->assertHasErrors(['email' => 'required']);
+Livewire::test(CreateProduct::class)
+    ->set('name.sk', '')
+    ->call('save')
+    ->assertHasErrors(['name.sk' => 'required']);
 
-// Actions and state changes
-Livewire::test(Counter::class)
-    ->call('increment')
-    ->assertSet('count', 1);
+// Negative authorization test (IDOR protection)
+$otherSeller = User::factory()->seller()->create();
+$foreignProduct = Product::factory()->create();
+
+Livewire::actingAs($otherSeller)
+    ->test(DeleteProduct::class, ['productId' => $foreignProduct->id])
+    ->call('delete')
+    ->assertForbidden();
 ```
 
 - **Používajte popisné názvy testovacích metód**
@@ -68,7 +75,7 @@ $this->post('/login', [
 
 - **Mockovanie externých závislostí**
   - V testoch nikdy nereálne netestujte API tretích strán alebo externé služby. Namiesto toho používajte "mocky" na ich simuláciu.
-  - Uistite sa, že všetky požiadavky využívajúce HTTP Clienta [boli nahradené (faked)](https://laravel.com/docs/11.x/http-client#preventing-stray-requests).
+  - Uistite sa, že všetky požiadavky využívajúce HTTP Clienta [boli nahradené (faked)](https://laravel.com/docs/13.x/http-client#preventing-stray-requests).
   - Takisto nahradzujte úlohy v radoch (queued processes), aby sa len overilo ich správne odoslanie, ale nevykonali sa reálne.
 
 ```php
@@ -120,3 +127,8 @@ class UserTest extends TestCase
 
 - Po významných zmenách v kóde vždy spustite testy, aby ste sa uistili, že aplikácia zostáva stabilná.
 - Ešte pred samotnou opravou nahlásenej chyby (bugu) vždy napíšte test, ktorý tento problém replikuje. Tak sa vyhnete tomu, aby sa rovnaký problém v budúcnosti objavil znova.
+
+
+---
+### Čo ďalej:
+8. Pozrite si štandardy pre [Lokalizáciu a viacjazyčné dáta](./8_localization.md).

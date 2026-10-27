@@ -1,47 +1,63 @@
-<!-- TODO PRE AI: Táto šablóna je úmyselne bez dizajnu a bez špecifických Blade komponentov! Musíš na ňu aplikovať Tailwind triedy (farby, tiene, zaoblenia) a nahradiť HTML tagy za existujúce Blade komponenty tak, aby 100% ladili s UI dizajnom aktuálneho projektu! -->
-<div>
-    <div class="mb-4">
-        <a href="{{ route('admin.product.index') }}" wire:navigate class="p-2 border">Späť na zoznam</a>
-    </div>
-
-    <div class="border p-4">
-        <div class="flex justify-between items-center border-b pb-4 mb-4">
-            <h2>{{ $page_title ?? 'Detail produktu' }}</h2>
-            <div class="space-x-2">
-                <a href="{{ route('admin.product.edit', $product->id) }}" wire:navigate class="p-2 border">Upraviť</a>
-                <button wire:click="$dispatch('confirm-delete', { id: {{ $product->id }} })" class="p-2 border text-red-500">Zmazať</button>
-            </div>
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <a href="{{ route('admin.product.index') }}" wire:navigate class="text-sm text-gray-500 hover:text-gray-800">
+                &larr; {{ t('admin.common.back_to_list') }}
+            </a>
+            <h1 class="mt-1 text-2xl font-bold text-gray-900">{{ $this->product->name }}</h1>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <strong>ID:</strong>
-                <p>{{ $product->id }}</p>
-            </div>
-            <div>
-                <strong>Názov:</strong>
-                <p>{{ $product->name }}</p>
-            </div>
-            <div>
-                <strong>Kategória:</strong>
-                <p>{{ $product->category }}</p>
-            </div>
-            <div>
-                <strong>Cena:</strong>
-                <p>{{ number_format($product->price, 2) }} €</p>
-            </div>
-            <div>
-                <strong>Stav:</strong>
-                <p>{{ $product->is_active ? 'Aktívny' : 'Neaktívny' }}</p>
-            </div>
-        </div>
+        <div class="flex items-center gap-3">
+            @can('update', $this->product)
+                <a
+                    href="{{ route('admin.product.edit', $this->product) }}"
+                    wire:navigate
+                    class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                >
+                    {{ t('admin.common.edit') }}
+                </a>
+            @endcan
 
-        <div class="mt-4 pt-4 border-t">
-            <strong>Popis:</strong>
-            <p class="whitespace-pre-line">{{ $product->description }}</p>
+            @can('delete', $this->product)
+                <button
+                    type="button"
+                    wire:click="$dispatch('confirm-product-delete', { productId: {{ $this->product->id }}, redirect: true })"
+                    class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
+                >
+                    {{ t('admin.common.delete') }}
+                </button>
+            @endcan
         </div>
     </div>
 
-    {{-- Delete Confirmation Component (Modal) --}}
-    <!-- TODO PRE AI: Tu umiestni vlastný dizajnový Livewire modál pre potvrdzovanie zmazania (napr. na základe eventu 'confirm-delete'). NESMIEŠ použiť natívny wire:confirm! -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div>
+            <dt class="text-xs font-semibold text-gray-500 uppercase">{{ t('admin.product.fields.name') }}</dt>
+            <dd class="mt-1 text-sm text-gray-900">{{ $this->product->name }}</dd>
+        </div>
+
+        <div>
+            <dt class="text-xs font-semibold text-gray-500 uppercase">{{ t('admin.product.fields.price') }}</dt>
+            <dd class="mt-1 text-sm text-gray-900">{{ $this->product->formatted_price }}</dd>
+        </div>
+
+        <div>
+            <dt class="text-xs font-semibold text-gray-500 uppercase">{{ t('admin.product.fields.category') }}</dt>
+            <dd class="mt-1 text-sm text-gray-900">
+                {{ \App\Models\Setting::getList('product', 'category')[$this->product->category] ?? '-' }}
+            </dd>
+        </div>
+
+        <div>
+            <dt class="text-xs font-semibold text-gray-500 uppercase">{{ t('admin.product.fields.author') }}</dt>
+            <dd class="mt-1 text-sm text-gray-900">{{ $this->product->user?->name ?? '-' }}</dd>
+        </div>
+
+        <div class="sm:col-span-2">
+            <dt class="text-xs font-semibold text-gray-500 uppercase">{{ t('admin.product.fields.description') }}</dt>
+            <dd class="mt-1 text-sm text-gray-700 whitespace-pre-line">{{ $this->product->description ?: '-' }}</dd>
+        </div>
+    </div>
+
+    <livewire:admin.product.delete />
 </div>

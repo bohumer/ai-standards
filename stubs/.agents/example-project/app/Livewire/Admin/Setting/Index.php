@@ -4,71 +4,58 @@ namespace App\Livewire\Admin\Setting;
 
 use App\Models\Setting;
 use App\Support\BaseLivewireComponent;
+use App\Traits\WithUniversalTable;
+use Illuminate\View\View;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Validate;
+use Livewire\Attributes\On;
+use Livewire\WithPagination;
 
+#[Layout('components.layouts.admin')]
 class Index extends BaseLivewireComponent
 {
-    public $modelName = '';
-    public $category = '';
-    public $flag = '';
+    use WithPagination;
+    use WithUniversalTable;
 
-
-
-    // Defined settings structure for sidebar
-    public $settingsStructure = [
-        'Article' => [
-            'type' => 'Typy článkov',
-            'category' => 'Kategórie článkov',
-        ],
-        'Course' => [
-            'level' => 'Úrovne kurzov',
-            'age_group' => 'Vekové skupiny',
-        ],
-        'StudyGroup' => [
-            'day_of_week' => 'Dni v týždni',
-        ],
+    /**
+     * Example dictionary groups for the reference project.
+     * In real projects, define only flags and keys matching actual project models.
+     */
+    protected array $settingsStructure = [
+        'product' => ['category'],
+        'system' => ['language'],
     ];
 
-    public function mount($modelName = null, $category = null)
+    public string $activeFlag = '';
+    public string $activeKey = '';
+
+    public function mount(?string $flag = null, ?string $key = null): void
     {
-        if ($modelName) {
-            // Find correct case for model from structure
-            $matchedModel = collect(array_keys($this->settingsStructure))
-                ->first(fn($key) => strtolower($key) === strtolower($modelName));
-                
-            $this->modelName = $matchedModel ?? ucfirst($modelName);
-            
-            if ($category) {
-                $this->category = strtolower($category);
-                $this->flag = $this->modelName . '.' . $this->category;
-                $this->setTitle('Nastavenia: ' . ($this->settingsStructure[$this->modelName][$this->category] ?? $this->flag));
-            } else {
-                $this->setTitle('Nastavenia: ' . $this->modelName);
-            }
-        } else {
-            $this->setTitle('Nastavenia systému');
+        $this->setTitle(t('admin.setting.index.title'));
+        $this->activeFlag = $flag ?? '';
+        $this->activeKey = $key ?? '';
+        $this->initFilters(Setting::class, ['delete']);
+    }
+
+    #[On('setting-deleted')]
+    public function refreshList(): void
+    {
+        $this->resetPage();
+    }
+
+    public function render(): View
+    {
+        $query = Setting::query();
+
+        if ($this->activeFlag !== '') {
+            $query->where('flag', $this->activeFlag);
         }
-    }
-
-
-
-    public function delete($id)
-    {
-        Setting::findOrFail($id)->delete();
-        $this->flash('success', 'Položka bola zmazaná.');
-    }
-
-    #[Layout('layouts.admin')]
-    public function render()
-    {
-        $items = [];
-        if ($this->flag) {
-            $items = Setting::where('flag', $this->flag)->orderBy('key')->get();
+        if ($this->activeKey !== '') {
+            $query->where('key', $this->activeKey);
         }
 
         return view('livewire.admin.setting.index', [
-            'items' => $items,
+            'settings' => $this->applyUniversalSearchAndSort($query)->paginate($this->getPerPageLimit()),
+            'structure' => $this->settingsStructure,
         ]);
     }
 }

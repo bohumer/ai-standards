@@ -2,139 +2,76 @@
 
 namespace App\Livewire\Admin\Translation;
 
-use App\Http\Requests\Admin\Translation\IndexRequest;
 use App\Models\Translation;
 use App\Support\BaseLivewireComponent;
-use App\Traits\ValidationTrait;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use Livewire\Attributes\Url;
-use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
+use Livewire\Attributes\Session;
+use Livewire\WithPagination;
 
-#[Layout('layout.admin')]
+#[Layout('components.layouts.admin')]
 class Index extends BaseLivewireComponent
 {
-	use ValidationTrait, WithPagination;
+    use WithPagination;
 
-	#[Url]
-	public $search = '';
-	#[Url]
-	public $sortField = 'key';
-	#[Url]
-	public $sortDirection = 'asc';
-	protected static $formRequest = IndexRequest::class;
+    #[Session]
+    public string $search = '';
 
-	// _constructor
-	public function mount() {
+    #[Session]
+    public string $sortDirection = 'asc';
 
-		// Set page title
-		$this->setTitle(t('translations'));
-	}
+    public function mount(): void
+    {
+        $this->setTitle(t('admin.translation.index.title'));
+    }
 
-	// Render the translations index view
-	public function render(): View {
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
-		// Get all translations, optionally filtered by search
-		$query = Translation::query();
-		if ( $this->search ) {
-			$matchingKeys = Translation::where('key', 'like', '%' . $this->search . '%')
-				->orWhere('value', 'like', '%' . $this->search . '%')
-				->pluck('key')->unique();
+    public function toggleSort(): void
+    {
+        $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        $this->resetPage();
+    }
 
-			// No results, return empty paginator
-			if ( $matchingKeys->isEmpty() ) {
-				$items = new LengthAwarePaginator([], 0, 100, $this->getPage(), [
-						'path' => request()->url(),
-						'pageName' => 'page',
-					]
-				);
-				return view('livewire.admin.translation.index', [
-					'items' => $items,
-				]);
-			}
+    #[On('translation-deleted')]
+    public function refreshList(): void
+    {
+        $this->resetPage();
+    }
 
-			// Query with results
-			$query->whereIn('key', $matchingKeys);
-		}
+    public function render(): View
+    {
+        $languages = app_langs();
+        $query = Translation::query();
 
-		// Structure data for the view
-		$structuredItems = [];
-		$grouped = $query->get()->groupBy('key');
-		foreach ($grouped as $key => $translations) {
-			$values = $translations->pluck('value', 'lang');
-			$structuredItems[$key] = [
-				'key' => $key,
-				'present_langs' => $values->keys()->toArray(),
-				'values' => $values->toArray(),
-			];
-		}
+        if ($this->search !== '') {
+            $term = '%' . $this->search . '%';
+            $query->where(static function ($q) use ($term) {
+                $q->where('key', 'like', $term)
+                    ->orWhere('value', 'like', $term);
+            });
+        }
 
-		// Sort items
-		if ( $this->sortField === 'key' ) {
-			$this->sortDirection === 'asc' ? ksort($structuredItems) : krsort($structuredItems);
-		} elseif ( $this->sortField === 'value' ) {
-			$currentLocale = app()->getLocale();
-			uasort($structuredItems, function ($a, $b) use ($currentLocale) {
-				$valA = $a['values'][$currentLocale] ?? '';
-				$valB = $b['values'][$currentLocale] ?? '';
-				return $this->sortDirection === 'asc' ? strcmp($valA, $valB) : strcmp($valB, $valA);
-			});
-		}
+        $paginatedKeys = $query->select('key')
+            ->groupBy('key')
+            ->orderBy('key', $this->sortDirection === 'asc' ? 'asc' : 'desc')
+            ->paginate(25);
 
-		// Manually paginate the array
-		$perPage = 100;
-		$currentPage = $this->getPage();
-		$totalItems = count($structuredItems);
-		$currentPageItems = array_slice($structuredItems, ($currentPage - 1) * $perPage, $perPage, true);
-		$items = new LengthAwarePaginator( $currentPageItems, $totalItems, $perPage, $currentPage, [
-				'path' => request()->url(),
-				'pageName' => 'page',
-			]
-		);
+        $rows = Translation::query()
+            ->whereIn('key', $paginatedKeys->pluck('key'))
+            ->get()
+            ->groupBy('key')
+            ->map(static fn ($items) => $items->pluck('value', 'lang')->all())
+            ->all();
 
-		// If requested page is out of range, reset to last page
-		if ($items->lastPage() > 0 && $items->currentPage() > $items->lastPage()) {
-			$this->setPage($items->lastPage());
-			$currentPage = $this->getPage();
-			$currentPageItems = array_slice($structuredItems, ($currentPage - 1) * $perPage, $perPage, true);
-			$items = new LengthAwarePaginator($currentPageItems, $totalItems, $perPage, $currentPage, [
-				'path' => request()->url(),
-				'pageName' => 'page',
-			]);
-		}
-
-		// Return view with modal state
-		return view('livewire.admin.translation.index', [
-			'items' => $items,
-		]);
-	}
-
-	// Reset page when search changes
-	public function updatedSearch() {
-		$this->resetPage();
-	}
-
-	// Reset filters
-	public function resetFilters() {
-		$this->search = '';
-		$this->resetPage();
-	}
-
-	// Sort by field
-	public function sortBy($field) {
-		if ( !in_array($field, ['key', 'value']) ) {
-			return;
-		} elseif ($this->sortField === $field) {
-			$this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-		} else {
-			$this->sortField = $field;
-			$this->sortDirection = 'asc';
-		}
-		$this->resetPage();
-	}
-
-
+        return view('livewire.admin.translation.index', [
+            'paginatedKeys' => $paginatedKeys,
+            'translations' => $rows,
+            'languages' => $languages,
+        ]);
+    }
 }
-

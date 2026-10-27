@@ -3,44 +3,66 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Cache;
 
 class Translation extends Model
 {
+    protected $table = 'translations';
 
-	// Base table name
-	protected $table = 'translations';
+    public $timestamps = false;
 
-	// The attributes that are mass assignable.
-	protected $fillable = [ 'key', 'lang', 'value', ];
+    protected $fillable = [
+        'lang',
+        'key',
+        'value',
+    ];
 
-	// Turn off tikmestamp columns
-	public $timestamps = false;
+    protected static array $runtimeCache = [];
 
+    protected static function booted(): void
+    {
+        $flush = static function (self $model): void {
+            Cache::forget("all_translations_{$model->lang}");
+            unset(self::$runtimeCache[$model->lang]);
+        };
 
-	// Get translated value
-	public static function translate($key, $flag=false): String {
+        static::saved($flush);
+        static::deleted($flush);
+    }
 
-		// Get model
-		$actual = App::getLocale();
-		$trans = self::where('key', strtolower($key))
-			->where('lang', $actual)
-			->first();
+    /**
+     * Resolve static UI translation for the active locale without fallback strings.
+     */
+    public static function translate(string $key, array $replace = []): string
+    {
+        if ($key === '') {
+            return '';
+        }
 
-		// Check model
-		if ( empty($trans) ) return '#' . mb_strtoupper($actual) . '.' . $key;
-		else $translation = nl2br($trans->value);
+        $lang = app_locale();
 
-		// Inline (non break space)
-		if ( $flag == 'nbsp' )
-			return str_replace(' ', '&nbsp;', $translation);
+        if (! isset(self::$runtimeCache[$lang])) {
+            self::$runtimeCache[$lang] = Cache::remember("all_translations_{$lang}", 3600, static function () use ($lang): array {
+                $dictionary = [];
+                foreach (self::query()->where('lang', $lang)->get(['key', 'value']) as $row) {
+                    $dictionary[mb_strtolower($row->key, 'UTF-8')] = $row->value;
+                }
 
-		// Return
-		return $translation;
-	}
+                return $dictionary;
+            });
+        }
 
+        $normalizedKey = mb_strtolower($key, 'UTF-8');
+        $value = self::$runtimeCache[$lang][$normalizedKey] ?? null;
 
+        if ($value === null || $value === '') {
+            return '#Trans.' . $key;
+        }
+
+        foreach ($replace as $placeholder => $replacement) {
+            $value = str_replace(':' . $placeholder, (string) $replacement, $value);
+        }
+
+        return $value;
+    }
 }
-

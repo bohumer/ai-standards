@@ -6,22 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('translations', function (Blueprint $table) {
             $table->id();
-            $table->string('key')->index();
-            $table->string('lang', 10)->index();
-            $table->text('value')->nullable();
+            $table->string('lang', 10);
+            $table->string('key');
+            $table->text('value');
+
+            $table->unique(['lang', 'key']);
+            $table->index('key');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('translations');

@@ -82,6 +82,7 @@ Systém používa výlučne **dva spôsoby prekladov** (podrobne v `standards/8_
     - Účelom ukážkových šablón je ukázať **logiku dát a prepojení** (ako fungujú parametre a volania), absolútne nie ich presný vizuál ani HTML štruktúru. Vždy prispôsob svoj kód existujúcemu frontendu!
 - **Zákaz nechráneného `{!! !!}` (XSS ochrana):** Používateľský HTML obsah (WYSIWYG, PageBuilder) nikdy nevypisuj cez `{!! $content !!}` bez serverovej HTML sanitizácie.
 - **Zákaz natívnych upozornení (`wire:confirm`):** Nikdy nepoužívaj natívne upozornenia prehliadača ako `wire:confirm="Naozaj zmazať?"`, `alert()` alebo `confirm()`. Na potvrdzovanie akcií (napr. zmazanie) **vždy použi alebo vytvor dizajnové modálne okno** (napr. cez AlpineJS alebo samostatný Livewire komponent ako `<livewire:admin.translation.delete />`), ktoré je vizuálne zosúladené s projektom.
+- **SPA Navigácia (`wire:navigate` v Livewire 4):** Interné odkazy v administrácii a klientskej zóne (sidebar, breadcrumbs, nav-linky) musia povinne využívať `wire:navigate` pre okamžitú SPA odozvu bez preblikávania stránky. Výnimkou sú výhradne binárne sťahovania súborov (PDF, XLSX), odhlasovanie (`logout`) a externé URL. Je prísne zakázané odstraňovať `wire:navigate` ako pokus o opravu problémov s prihlasovaním alebo session.
 
 ## 6. Pravidlá pri zmene štruktúry modelu (Pridanie/Odobratie poľa)
 

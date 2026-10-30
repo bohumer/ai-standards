@@ -56,6 +56,14 @@ return view('users.index', compact('users'));
   - **Optimalizácia:** Atribúty `wire:model` sú predvolene deferované (odložené). Pre okamžitú odozvu pri vyhľadávaní využite explicitne `wire:model.live.debounce.300ms="search"`. Pre formulárové polia, ktoré sa majú zvalidovať a auto-uložiť po opustení inputu, použite `wire:model.live.blur`.
   - **Odosielanie formulárov:** Pri formulároch v Livewire vždy používajte `wire:submit="save"`.
   - **UX Loading indikátory:** Vždy používajte indikátory načítavania `wire:loading` a `wire:target="save"` pre asynchrónne akcie, aby mal používateľ okamžitú spätnú väzbu a neodoslal formulár dvakrát.
+  - **SPA Navigácia v Livewire 4 (`wire:navigate`):**
+    - Na všetkých interných odkazoch administrácie aj verejnej časti (`<a href="..." wire:navigate>`), v bočných menu (sidebar), hlavičkách a omrvinkách (breadcrumbs) povinne používajte `wire:navigate`. Tým sa zabezpečí plynulá SPA navigácia bez preblikávania a zbytočného opätovného sťahovania CSS/JS skriptov.
+    - **Kedy `wire:navigate` ZÁSADNE NEPOUŽÍVAŤ (Výnimky):**
+      1. **Sťahovanie binárnych súborov a exporty:** Odkazy na stiahnutie PDF, XLSX, ZIP (napr. exporty tabuliek, faktúry, potvrdenia). Livewire by ich inak interpretoval ako HTML response, čo vedie k zlyhaniu sťahovania.
+      2. **Odhlasovanie (Logout):** Akcie, ktoré ničia session a vyžadujú kompletný hard refresh okna.
+      3. **Externé odkazy:** Odkazy smerujúce mimo domény aplikácie.
+    - **Životný cyklus JavaScriptu (`livewire:navigated`):** Pri SPA prechodoch cez `wire:navigate` sa pri ďalších stránkach nespúšťa udalosť `DOMContentLoaded`. Všetky klientske inicializácie (Alpine modály, SortableJS, tooltips, vlastné sidebar handlery) musia počúvať na udalosť `document.addEventListener('livewire:navigated', ...)`.
+    - **Zákaz odstraňovania `wire:navigate`:** Je prísne zakázané odstraňovať `wire:navigate` ako provizórne riešenie chýb autentifikácie, login loopov alebo neočakávaných redirectov. Presmerovanie je vždy dôsledkom backendového stavu (middleware, session, autorizácia, email verifikácia), nie frontendovej transportnej vrstvy.
 
 - **Blade Komponentové Layouty v Livewire 4:**
   - Pre layouty používajte moderné **Blade komponenty** v `resources/views/components/layouts/` (napr. `app.blade.php`, `admin.blade.php`) s výpisom `{{ $slot }}` a v Livewire triede ich priraďujte atribútom `#[Layout('components.layouts.admin')]`. Zastarané dedenie `@extends()` / `@section()` v nových Livewire komponentoch nepoužívajte.

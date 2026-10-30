@@ -28,6 +28,7 @@
   4. stavové príznaky a dátumové polia (`status`, `published_at`)
   5. Laravel `timestamps()` / `softDeletes()`
 - Pomocou metódy `casts(): array` transformujte Eloquent atribúty pre dátumové polia na objekt Carbon (`'datetime'`, `'date'`), JSON štruktúry na `'array'` a logické príznaky na `'boolean'`.
+- **Model `User` a `email_verified_at`:** Ak model `User` implementuje rozhranie `MustVerifyEmail`, pole `'email_verified_at'` musí byť trvalo zaradené v `$fillable`. Bez jeho prítomnosti vo `$fillable` Eloquent pri mass-assignmente v seederoch (`firstOrCreate`, `create`) a programovom vytváraní správcov timestamp ticho zahodí, čo spôsobí zacyklenie v `verified` middleware.
 
 - **Bezpečnosť modelov a stavu v Livewire (KRITICKÉ):**
   - Všetky verejné premenné (`public properties`) v Livewire komponente sú serializované do HTML (`wire:snapshot`) a pokiaľ nie sú uzamknuté, klient ich môže v požiadavke `livewire/update` ľubovoľne prepísať.

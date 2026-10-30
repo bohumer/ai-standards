@@ -82,6 +82,11 @@ Route::get('/profile/{user?}', [ProfileController::class, 'show'])->name('profil
 - **Ochrana catch-all (wildcard) ciest:**
   - Ak v `routes/web.php` definujete dynamickú cestu na koreňovej úrovni (napr. `/{slug}` pre kategórie alebo CMS stránky), vždy ju umiestnite **na úplný koniec súboru** a chráňte ju regulárnym výrazom cez `where()`, aby neprekryla systémové prefixy (`admin`, `dashboard`, `livewire`, `api`, `storage`).
 
+- **Administrátorský Routing a Autentifikácia:**
+  - **Jediný Guard (`web`):** V celom projekte používajte výhradne štandardný guard `web` (nevytvárajte oddelený `admin` guard).
+  - **Konzistentný Middleware Stack pre Administráciu:** Všetky administrátorské routy a Livewire komponenty zoskupujte do skupiny s jednotným middleware stackom `['auth', 'verified', 'admin']`. Zdieľané skupiny s pedagógmi používajú `['auth', 'verified', 'teacher-or-admin']`.
+  - **Explicitné URL skratky pre administráciu:** Pre skratky `/admin` a `/admin/login` vždy definujte explicitné presmerovania (`Route::get('admin', fn () => redirect()->route('admin.dashboard'))` a `Route::redirect('admin/login', '/login')`), aby nespadávali do catch-all fallback controllerov a nespôsobovali zmätočné presmerovania na homepage.
+
 
 ---
 ### Čo ďalej:
